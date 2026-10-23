@@ -1,11 +1,45 @@
 # Tool setup troubleshooting
 
+Use these checks to narrow down setup, simulator, UVM, synthesis, and waveform
+failures. Start with the non-installing checks below.
+
+## Contents
+
+- [First checks](#first-checks)
+- [Remove generated outputs](#remove-generated-outputs)
+- [A tool is missing or cannot run](#a-tool-is-missing-or-cannot-run)
+- [Verilator version or UVM source is missing](#verilator-version-or-uvm-source-is-missing)
+- [A compile or simulation smoke test fails](#a-compile-or-simulation-smoke-test-fails)
+
+## First checks
+
 Start with the non-installing checks:
 
 ```bash
 scripts/tool_setup_and_check.sh --check-only
 scripts/diagnose.sh
 ```
+
+## Remove generated outputs
+
+`vlsi clean` targets the current working directory. Run it from the RTL project
+whose outputs you want to remove, or pass that project with `--project`:
+
+```bash
+../vlsi-toolkit/vlsi clean --dry-run
+../vlsi-toolkit/vlsi clean
+```
+
+From the toolkit root, for example, target the sibling demo explicitly:
+
+```bash
+./vlsi clean --project ../vlsi-toolkit-demo-rtl --dry-run
+./vlsi clean --project ../vlsi-toolkit-demo-rtl
+```
+
+The command removes only `build/`, `logs/`, and `log/` under the selected
+project root. It does not remove custom build directories configured elsewhere
+or selected with `--build-dir` outside those directories.
 
 The setup scripts print a suggested resolution when a check fails. The apt
 install and Verilator build log is
@@ -26,6 +60,13 @@ The toolkit CLI needs Python 3.10 or newer. Python 3.10 also needs the Ubuntu
 to install it if missing. Check `python3 --version` and, on a system with
 multiple interpreters, make sure `python3` selects the supported version before
 invoking `./vlsi`.
+
+If `./vlsi doctor` reports `sta` missing, run `scripts/tool_setup_and_check.sh`
+to install its build dependencies and build pinned OpenSTA/CUDD sources. The
+installer log is `build/tool_setup/logs/tool_setup_install.log`. If setup has
+already installed OpenSTA but the current shell cannot find it, run
+`source ~/opt/opensta/opensta-env.sh`. For a failed timing smoke check, inspect
+the newest `build/tool_setup/opensta/smoke.*/run.log` and its `build/timing.log`.
 
 ## Verilator version or UVM source is missing
 

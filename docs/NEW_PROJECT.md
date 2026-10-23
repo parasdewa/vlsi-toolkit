@@ -1,83 +1,112 @@
 # Create and run a project
 
+Follow this guide to generate an empty project scaffold, run an existing
+design, and configure UVM when needed.
+
+## Contents
+
+- [Create a project scaffold](#create-a-project-scaffold)
+- [Pass your own project files directly](#pass-your-own-project-files-directly)
+- [Run a UVM project with Verilator](#run-a-uvm-project-with-verilator)
+
+## Create a project scaffold
+
 These commands assume the toolkit is checked out. If tools are not installed
 yet, follow [Installation and tool setup](INSTALLATION.md). From the toolkit
-repository, create a starter project:
+repository, create a project scaffold:
 
 ```bash
 ./vlsi init ../my_rtl_project
 ```
 
-The command creates an AND-gate RTL module, a testbench that checks all four
-input combinations, a TOML manifest, and a short README. It refuses to write
-into a non-empty directory. The generated manifest selects Verilator by
-default. Select Icarus explicitly with `--sim iverilog`.
+The command creates directories and flow helper scripts, but no RTL, testbench,
+constraints, or TOML manifests. It refuses to write into a non-empty
+directory. The structure separates plain simulation sources, UVM components,
+constraints, configuration, scripts, tests, and generated build outputs:
 
-You can run the project from the toolkit repository with its manifest:
-
-```bash
-./vlsi run --config ../my_rtl_project/vlsi.toml
-./vlsi synth --config ../my_rtl_project/vlsi.toml
+```text
+my_rtl_project/
+├── config/                     # user-created plain.toml, uvm.toml, synth.toml, timing.toml
+├── rtl/
+│   ├── include/
+│   └── constraints/             # ABC and SDC files live with the RTL
+│       ├── abc/
+│       └── sdc/
+├── tb/plain/
+├── tb/uvm/                     # interfaces, packages, agents, env, sequences, tests, top
+├── scripts/                    # run_plain.sh, run_uvm.sh, synth.sh, timing.sh
+├── tests/unit/
+├── tests/regression/
+└── build/                      # per-flow simulation, synthesis, timing outputs
 ```
 
-Or change into the project directory and use the relative toolkit path:
+Create your design sources, timing constraints, and manifests in the matching
+directories. The helper scripts expect `config/plain.toml`, `config/uvm.toml`,
+`config/synth.toml`, and `config/timing.toml`. For example:
+
+Because these TOML files live one directory below the project root, set
+`[project] root = ".."` in each manifest. Set each flow's `build_dir` to the
+matching path under `build/` to keep outputs separated, for example
+`build_dir = "build/sim/plain-verilator"` under `[run]`.
 
 ```bash
 cd ../my_rtl_project
-../vlsi-toolkit/vlsi run --config vlsi.toml
-../vlsi-toolkit/vlsi synth --config vlsi.toml
+./scripts/run_plain.sh
+./scripts/run_plain.sh --sim iverilog
+./scripts/run_uvm.sh
+./scripts/synth.sh
+./scripts/timing.sh
 ```
 
-`--config vlsi.toml` tells `vlsi` to load saved project settings: source lists,
-top modules, simulator and UVM options, and build directories. It is optional.
-For a first simulation or synthesis, pass those options directly instead:
+The wrappers call `vlsi` from `PATH`, use `../vlsi-toolkit/vlsi` when the
+project sits beside the toolkit, or use an executable specified by `VLSI_CLI`.
+They forward any extra command-line options. If you want to start without a
+manifest, call the toolkit directly and provide your source files explicitly:
 
 ```bash
 ../vlsi-toolkit/vlsi run --sim verilator \
   --project . \
-  --top and_gate_tb \
-  --rtl rtl/and_gate.sv \
-  --tb tb/and_gate_tb.sv
+  --top my_testbench \
+  --rtl rtl/my_design.sv \
+  --tb tb/plain/my_testbench.sv
 
 ../vlsi-toolkit/vlsi synth \
   --project . \
-  --top and_gate \
-  --rtl rtl/and_gate.sv
+  --top my_design \
+  --rtl rtl/my_design.sv
 ```
 
-For a UVM testbench, add `--uvm --include tb` and list each required UVM
-interface, package, and top file with a separate `--tb` option. Add each RTL
-source with a separate `--rtl` option. For example, the UVM testbench in
-`vlsi-toolkit-demo-rtl` can be run without its manifest using:
+For a UVM testbench, add `--uvm` and list each interface, package, and top
+source with a separate `--tb` option. Set `--include` to the directory or
+directories containing UVM includes. For example, after creating these files:
 
 ```bash
 ../vlsi-toolkit/vlsi run --sim verilator --uvm --jobs 1 \
   --project . \
-  --top and_gate_tb_top \
-  --rtl rtl/and_gate.sv \
-  --tb tb/and_gate_if.sv \
-  --tb tb/and_gate_pkg.sv \
-  --tb tb/and_gate_tb_top.sv \
-  --include tb \
+  --top my_uvm_top \
+  --rtl rtl/my_design.sv \
+  --tb tb/uvm/interfaces/my_if.sv \
+  --tb tb/uvm/packages/my_pkg.sv \
+  --tb tb/uvm/top/my_uvm_top.sv \
+  --include tb/uvm \
   --build-dir build/uvm-first-run
 ```
 
-Use a distinct build directory for each design if you want their build outputs
-kept separate. The manifest is convenient for repeated runs because it saves
-these options in one place.
+Manifests save source lists, top modules, simulator/UVM settings, and build
+directories. Keep simulation, synthesis, and timing outputs in distinct build
+directories. Logs and reports are written within each flow's build directory.
 
 The simulation checks the design and writes a VCD under the project's build
 directory. Open it with GTKWave, for example:
 
 ```bash
-gtkwave ../vlsi-toolkit-demo-rtl/build/run/waveforms/and_gate.vcd
+gtkwave build/sim/plain-verilator/waveforms/my_design.vcd
 ```
 
-Edit the generated RTL and testbench to start your design. Add more files by
-editing the `[run]` and `[synth]` source lists in `vlsi.toml`. For a project
-you want to keep independently, create it outside the toolkit directory and
-give that project its own Git repository later. The toolkit accepts external
-project paths and does not require projects to be nested inside its repository.
+For a project you want to keep independently, create it outside the toolkit
+directory and give that project its own Git repository. The toolkit accepts
+external project paths and does not require projects to be nested inside its
+repository.
 
 ## Pass your own project files directly
 

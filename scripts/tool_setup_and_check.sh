@@ -5,6 +5,8 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 LIB="$ROOT/scripts/lib"
 source "$LIB/common.sh"
 source "$LIB/platform.sh"
+source "$LIB/opensta_setup.sh"
+ts_opensta_activate_local
 source "$LIB/detect_tools.sh"
 source "$LIB/install_packages.sh"
 source "$LIB/check_uvm.sh"
@@ -22,9 +24,10 @@ case "${1:-}" in
 Usage: scripts/tool_setup_and_check.sh [--check-only|--smoke-only]
 
 Default: detect missing Ubuntu packages, install only those packages, verify
-the tools and Verilator UVM source, then run the RTL/UVM smoke suite.
+the tools and Verilator UVM source, build pinned OpenSTA if needed, then run
+the RTL/UVM and OpenSTA timing smoke checks.
 --check-only: report tool and UVM availability without installing or compiling.
---smoke-only: skip installation and run the compile/simulation smoke suite.
+--smoke-only: skip installation and run the compile/simulation/timing smoke suite.
 
 Set VERILATOR_UVM_DIR to the Verilator test_regress/t/uvm directory when the
 UVM package is not located beneath VERILATOR_ROOT.
@@ -48,6 +51,7 @@ if [[ "$MODE" == install ]]; then
     else
         ts_info "All required Ubuntu packages are already present; apt was not run."
     fi
+    ts_prepare_opensta || { ts_diagnose opensta; exit 1; }
     ts_prepare_verilator_uvm || { ts_diagnose uvm; exit 1; }
 fi
 
@@ -60,7 +64,7 @@ fi
 
 ts_check_tools || { ts_diagnose tools; exit 1; }
 ts_check_uvm || { ts_diagnose uvm; exit 1; }
-ts_info "Starting compile and simulation smoke tests. Verilator build parallelism is limited to one job."
+ts_info "Starting compile, simulation, synthesis, and OpenSTA smoke tests. Verilator/OpenSTA build parallelism is limited to one job."
 if ! ts_run_smoke_tests "$ROOT" "$RESOLVED_UVM_DIR"; then
     exit 1
 fi

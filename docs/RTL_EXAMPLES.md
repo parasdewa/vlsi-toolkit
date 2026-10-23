@@ -1,5 +1,10 @@
 # RTL examples
 
+The synchronous FIFO fixture is the toolkit's broader directed and
+pseudo-random RTL example.
+
+## Run the FIFO checks
+
 The toolkit includes a parameterized synchronous FIFO in
 `tests/rtl/sync_fifo/`. Its manifest can run the self-checking testbench or
 synthesize the RTL:
@@ -32,6 +37,8 @@ The seed is a nonzero 32-bit hexadecimal value and the cycle count must be
 positive. Runs also need enough cycles to hit the required randomized operation
 coverage. The test prints the seed, final LFSR state, and operation coverage
 counts.
+
+## FIFO behavior and synthesis notes
 
 The FIFO accepts a push only when it is not full and accepts a pop only when it
 is not empty. When both are asserted at an intermediate occupancy, both

@@ -29,6 +29,17 @@ ts_missing_packages() {
     for tool in autoconf flex bison help2man; do
         command -v "$tool" >/dev/null 2>&1 || MISSING_PACKAGES+=("$tool")
     done
+    if ! ts_opensta_is_usable; then
+        for package in cmake swig curl tcl-dev libeigen3-dev; do
+            case "$package" in
+                cmake) command -v cmake >/dev/null 2>&1 || MISSING_PACKAGES+=("$package") ;;
+                swig) command -v swig >/dev/null 2>&1 || MISSING_PACKAGES+=("$package") ;;
+                curl) command -v curl >/dev/null 2>&1 || MISSING_PACKAGES+=("$package") ;;
+                tcl-dev) [[ -f /usr/include/tcl/tcl.h || -f /usr/include/tcl8.6/tcl.h ]] || MISSING_PACKAGES+=("$package") ;;
+                libeigen3-dev) [[ -f /usr/include/eigen3/Eigen/Core ]] || MISSING_PACKAGES+=("$package") ;;
+            esac
+        done
+    fi
     if ((${#MISSING_PACKAGES[@]})); then
         mapfile -t MISSING_PACKAGES < <(printf '%s\n' "${MISSING_PACKAGES[@]}" | sort -u)
     fi
@@ -36,7 +47,7 @@ ts_missing_packages() {
 
 ts_check_tools() {
     local failed=0 tool version
-    for tool in git tree iverilog vvp gtkwave yosys python3 g++ make autoconf flex bison help2man; do
+    for tool in git tree iverilog vvp gtkwave yosys python3 g++ make autoconf flex bison help2man sta; do
         if ! command -v "$tool" >/dev/null 2>&1; then
             ts_error "Missing executable: $tool"
             failed=1
@@ -63,6 +74,7 @@ ts_check_tools() {
             flex) version="$(flex --version 2>&1 | head -n 1)" ;;
             bison) version="$(bison --version 2>&1 | head -n 1)" ;;
             help2man) version="$(help2man --version 2>&1 | head -n 1)" ;;
+            sta) version="$(sta -version 2>&1 | head -n 1)" ;;
         esac
         printf '[PASS] %-10s %s\n' "$tool" "$version"
     done

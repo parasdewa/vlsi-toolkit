@@ -1,5 +1,10 @@
 # Waveforms
 
+The runners write VCD traces when requested, and GTKWave can inspect traces
+from either supported simulator.
+
+## Generate and open a waveform
+
 Pass `--waveform` to `vlsi run` to generate a VCD file at
 `<build-dir>/waveform.vcd`. Both Icarus and Verilator support this option; the
 runner enables VCD tracing for Verilator and passes the output path to the
@@ -11,6 +16,8 @@ directory, and parent directories are created automatically. The command
 returns an error if the testbench exits successfully without creating the
 requested VCD. Use `--no-waveform` to turn off waveform generation configured
 in a manifest.
+
+## Add the testbench dump hook
 
 The testbench must include a conditional dump block. This keeps waveform
 generation optional and avoids changing normal simulation runs:

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import shlex
 import shutil
 import subprocess
 import tempfile
@@ -76,37 +75,30 @@ class ToolkitCliTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout)
             self.assertIn("COUNTER_TEST_PASSED count=5", result.stdout)
 
-    @unittest.skipUnless(shutil.which("verilator"), "Verilator is not installed")
-    def test_init_creates_verilator_project_by_default(self) -> None:
+    def test_init_creates_empty_project_scaffold_and_scripts(self) -> None:
         REGRESSION_ROOT.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(prefix="init-", dir=REGRESSION_ROOT) as output:
             project = Path(output) / "starter"
             initialized = self.invoke("init", str(project))
             self.assertEqual(initialized.returncode, 0, initialized.stdout)
-            self.assertTrue((project / "rtl" / "and_gate.sv").is_file())
-            self.assertTrue((project / "tb" / "and_gate_tb.sv").is_file())
-            self.assertTrue((project / "vlsi.toml").is_file())
-            self.assertIn('sim = "verilator"', (project / "vlsi.toml").read_text(encoding="utf-8"))
-            generated_readme = (project / "README.md").read_text(encoding="utf-8")
-            self.assertIn(shlex.quote(str(project / "vlsi.toml")), generated_readme)
-
-            result = self.invoke("run", "--config", str(project / "vlsi.toml"))
-            self.assertEqual(result.returncode, 0, result.stdout)
-            self.assertIn("AND_GATE_TEST_PASSED", result.stdout)
-            self.assertTrue((project / "build" / "run" / "waveforms" / "and_gate.vcd").is_file())
-
-    @unittest.skipUnless(shutil.which("iverilog") and shutil.which("vvp"), "Icarus is not installed")
-    def test_init_iverilog_override(self) -> None:
-        REGRESSION_ROOT.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryDirectory(prefix="init-iverilog-", dir=REGRESSION_ROOT) as output:
-            project = Path(output) / "starter"
-            initialized = self.invoke("init", str(project), "--sim", "iverilog")
-            self.assertEqual(initialized.returncode, 0, initialized.stdout)
-            self.assertIn('sim = "iverilog"', (project / "vlsi.toml").read_text(encoding="utf-8"))
-            result = self.invoke("run", "--config", str(project / "vlsi.toml"))
-            self.assertEqual(result.returncode, 0, result.stdout)
-            self.assertIn("AND_GATE_TEST_PASSED", result.stdout)
-            self.assertTrue((project / "build" / "run" / "waveforms" / "and_gate.vcd").is_file())
+            expected_directories = (
+                "config", "rtl/include", "tb/plain", "tb/uvm/interfaces",
+                "tb/uvm/packages", "tb/uvm/agents", "tb/uvm/env",
+                "tb/uvm/sequences", "tb/uvm/tests", "tb/uvm/top",
+                "rtl/constraints/abc", "rtl/constraints/sdc", "tests/unit",
+                "tests/regression", "build/sim/plain-verilator",
+                "build/sim/plain-iverilog", "build/sim/uvm-verilator",
+                "build/synth/generic", "build/synth/technology", "build/timing",
+            )
+            for relative in expected_directories:
+                self.assertTrue((project / relative).is_dir(), relative)
+            for script in ("run_plain.sh", "run_uvm.sh", "synth.sh", "timing.sh"):
+                script_path = project / "scripts" / script
+                self.assertTrue(script_path.is_file(), script)
+                self.assertTrue(script_path.stat().st_mode & 0o111, script)
+            self.assertFalse((project / "rtl" / "and_gate.sv").exists())
+            self.assertFalse((project / "config" / "plain.toml").exists())
+            self.assertTrue((project / ".gitignore").is_file())
 
     @unittest.skipUnless(shutil.which("iverilog") and shutil.which("vvp"), "Icarus is not installed")
     def test_counter_project_config_and_cli_override(self) -> None:

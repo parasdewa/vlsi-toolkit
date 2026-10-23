@@ -1,5 +1,10 @@
 # Regression checks
 
+Run the regression suite from the repository root. It uses Python's standard
+library and conditionally enables checks for installed EDA tools.
+
+## Run the suite
+
 The toolkit's regression suite uses Python's standard-library `unittest` and
 does not need pip-installed dependencies. Python 3.10 also needs Ubuntu's
 `python3-tomli` package for the toolkit's TOML manifests; the setup script
@@ -8,6 +13,8 @@ checks and installs it when needed.
 ```bash
 python3 -m unittest discover -s tests/toolkit -v
 ```
+
+## Coverage and build isolation
 
 The suite checks CLI help, project scaffolding, invalid source handling, and manifest-driven flows.
 When Icarus, Verilator, or Yosys is installed, it also runs the small counter

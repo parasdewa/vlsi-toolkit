@@ -1,5 +1,8 @@
 # Tool setup verification report
 
+This report records the setup-script result from the environment below. It is
+a dated verification snapshot, not a guarantee about another host.
+
 Checked on 2026-10-22 in Ubuntu 24.04.5 LTS under WSL by running
 `scripts/tool_setup_and_check.sh`. The complete run passed.
 

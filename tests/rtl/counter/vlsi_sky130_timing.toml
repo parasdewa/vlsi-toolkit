@@ -1,0 +1,17 @@
+# Host example for the Sky130 HD Liberty installed under ~/opt/pdk.
+# Edit the Liberty paths if your library is installed elsewhere.
+[project]
+root = "."
+
+[synth]
+top = "counter"
+rtl = ["counter.sv"]
+liberty = "~/opt/pdk/sky130hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib"
+build_dir = "../../../build/counter-synth"
+
+[timing]
+top = "counter"
+netlist = "../../../build/counter-synth/netlist.v"
+liberty = "~/opt/pdk/sky130hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib"
+sdc = "timing.sdc"
+build_dir = "../../../build/counter-timing"

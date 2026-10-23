@@ -36,4 +36,24 @@ ts_run_smoke_tests() {
         printf '[PASS] VCD file verified: %s\n' "$waveform"
     done
     printf '[PASS] GTKWave executable is available; GUI launch is environment-dependent and was not opened.\n'
+
+    local timing_root="$root/build/tool_setup/opensta"
+    local timing_dir timing_log fixture="$root/tests/rtl/opensta_smoke"
+    mkdir -p "$timing_root"
+    timing_dir="$(mktemp -d "$timing_root/smoke.XXXXXX")"
+    timing_log="$timing_dir/run.log"
+    ts_info "Smoke test: OpenSTA constrained timing on a synthetic one-cell Liberty fixture."
+    if ! (cd "$root" && ./vlsi timing --project "$fixture" --top smoke_top \
+        --netlist "$fixture/smoke.v" --liberty "$fixture/smoke.lib" \
+        --sdc "$fixture/timing.sdc" --build-dir "$timing_dir/build") 2>&1 | tee "$timing_log"; then
+        ts_diagnose smoke "$root"
+        return 1
+    fi
+    if ! grep -q 'TIMING_STATUS PASS' "$timing_log" || \
+        [[ ! -s "$timing_dir/build/timing.log" ]]; then
+        ts_error "OpenSTA did not produce a passing timing status and non-empty report log."
+        ts_diagnose smoke "$root"
+        return 1
+    fi
+    printf '[PASS] OpenSTA timing smoke report verified: %s\n' "$timing_dir/build/timing.log"
 }

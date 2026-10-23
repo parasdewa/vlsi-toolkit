@@ -1,5 +1,17 @@
 # Compile and simulate a project
 
+This guide covers the simulator runners, waveform-enabled runs, UVM, and the
+repository's standalone smoke scripts.
+
+## Contents
+
+- [Icarus Verilog](#icarus-verilog)
+- [Verilator](#verilator)
+- [Run UVM with the CLI](#run-uvm-with-the-cli)
+- [Compile the toolkit smoke examples](#compile-the-toolkit-smoke-examples)
+
+## Icarus Verilog
+
 The first runner uses Icarus Verilog and requires no Python packages beyond the
 standard library.
 

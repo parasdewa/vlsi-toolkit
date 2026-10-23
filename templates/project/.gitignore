@@ -1,0 +1,6 @@
+# Generated simulation, synthesis, and timing outputs
+/build/
+/logs/
+/reports/
+__pycache__/
+*.py[cod]

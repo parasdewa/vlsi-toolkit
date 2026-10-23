@@ -4,6 +4,13 @@ This plan completes the RTL/UVM tool setup before starting a laptop setup guide
 or a new SoC project. Git initialization and GitHub setup are explicitly left
 until the end.
 
+## Contents
+
+- [Current audit](#current-audit)
+- [Simulator and waveform decision](#simulator-and-waveform-decision)
+- [Implementation sequence](#implementation-sequence)
+- [External tool references](#external-tool-references)
+
 ## Current audit
 
 - Icarus Verilog 12.0, `vvp`, Verilator 5.052, Yosys 0.33, GTKWave, `git`, and

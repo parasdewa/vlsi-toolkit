@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import os
 import re
-import shlex
 import shutil
 import subprocess
 import sys
@@ -18,6 +17,8 @@ except ModuleNotFoundError:  # Python 3.10 on Ubuntu 22.04 uses the packaged tom
 
 from . import __version__
 from .runners.iverilog import run_iverilog
+from .runners.liberty import check_liberty
+from .runners.opensta import run_opensta
 from .runners.verilator import run_verilator
 from .runners.yosys import run_yosys
 
@@ -28,6 +29,7 @@ TOOL_VERSIONS = (
     ("vvp", ("-V",)),
     ("verilator", ("--version",)),
     ("yosys", ("-V",)),
+    ("sta", ("-version",)),
     ("gtkwave", None),
 )
 DEFINE_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(?:=.*)?$")
@@ -80,6 +82,20 @@ def _resolve_project_paths(project: Path, entries: list[str], label: str) -> lis
     return resolved
 
 
+def _resolve_optional_project_file(
+    project: Path, value, setting: str, section: str = "synth"
+) -> Path | None:
+    if value is None:
+        return None
+    if not isinstance(value, (str, Path)):
+        raise ValueError(f"{section} {setting} must be a file path string")
+    path = Path(value).expanduser()
+    path = (project / path).resolve() if not path.is_absolute() else path.resolve()
+    if not path.is_file():
+        raise ValueError(f"{section} {setting} file does not exist or is not a file: {path}")
+    return path
+
+
 def _load_config(config_path: Path | None, section: str) -> tuple[dict, Path | None]:
     if config_path is None:
         return {}, None
@@ -93,7 +109,7 @@ def _load_config(config_path: Path | None, section: str) -> tuple[dict, Path | N
 
     if not isinstance(config, dict):
         raise ValueError("configuration root must be a TOML table")
-    allowed_root = {"project", "run", "synth"}
+    allowed_root = {"project", "run", "synth", "timing"}
     unknown_root = set(config) - allowed_root
     if unknown_root:
         raise ValueError(f"unknown configuration section(s): {', '.join(sorted(unknown_root))}")
@@ -113,7 +129,14 @@ def _load_config(config_path: Path | None, section: str) -> tuple[dict, Path | N
     if not isinstance(settings, dict):
         raise ValueError(f"configuration must contain a [{section}] table")
     common_keys = {"top", "rtl", "include", "defines", "build_dir"}
-    section_keys = common_keys | ({"sim", "tb", "sim_args", "waveform", "waveform_file", "jobs", "uvm", "uvm_dir"} if section == "run" else set())
+    if section == "run":
+        section_keys = common_keys | {
+            "sim", "tb", "sim_args", "waveform", "waveform_file", "jobs", "uvm", "uvm_dir"
+        }
+    elif section == "synth":
+        section_keys = common_keys | {"liberty", "abc_constraints", "delay_ps"}
+    else:
+        section_keys = {"top", "netlist", "liberty", "sdc", "spef", "build_dir"}
     unknown_settings = set(settings) - section_keys
     if unknown_settings:
         raise ValueError(f"unknown [{section}] key(s): {', '.join(sorted(unknown_settings))}")
@@ -170,15 +193,46 @@ def _doctor() -> int:
     if missing:
         apt_packages = sorted({
             {"iverilog": "iverilog", "vvp": "iverilog", "yosys": "yosys", "gtkwave": "gtkwave"}.get(tool, tool)
-            for tool in missing if tool != "verilator"
+            for tool in missing if tool not in ("verilator", "sta")
         })
         if apt_packages:
             print("Install missing Ubuntu tools with:")
             print("  sudo apt-get update && sudo apt-get install -y " + " ".join(apt_packages))
+        if "sta" in missing:
+            print("OpenSTA is required for 'vlsi timing'; see docs/TIMING_ANALYSIS.md for the upstream build instructions.")
         if "verilator" in missing:
             print("For the toolkit's supported Verilator/UVM version, run:")
             print("  scripts/tool_setup_and_check.sh")
         return 1
+    return 0
+
+
+def _clean(project: Path | None = None, *, dry_run: bool = False) -> int:
+    """Remove generated output directories and logs under the selected project."""
+    root = Path.cwd() if project is None else project.expanduser()
+    if not root.is_absolute():
+        root = Path.cwd() / root
+    root = root.resolve()
+    if not root.is_dir():
+        raise ValueError(f"clean project directory does not exist: {root}")
+
+    targets = (root / "build", root / "logs", root / "log")
+    found = [path for path in targets if path.exists() or path.is_symlink()]
+    if not found:
+        print(f"Nothing to clean (no build or log outputs found under {root}).")
+        return 0
+
+    for path in found:
+        if dry_run:
+            print(f"Would remove: {path}")
+        else:
+            if path.is_dir() and not path.is_symlink():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
+            print(f"Removed: {path}")
+    if dry_run:
+        print("Dry run only; no files were removed.")
     return 0
 
 
@@ -325,6 +379,9 @@ def _synth(args: argparse.Namespace) -> int:
     rtl = _selected(args.rtl, settings, "rtl", None)
     includes_value = _selected(args.include, settings, "include", [])
     defines = _selected(args.define, settings, "defines", [])
+    liberty_value = _selected(args.liberty, settings, "liberty", None)
+    constraints_value = _selected(args.abc_constraints, settings, "abc_constraints", None)
+    delay_ps = _selected(args.delay_ps, settings, "delay_ps", None)
     if not isinstance(rtl, list) or not rtl or not all(isinstance(item, str) for item in rtl):
         raise ValueError("synth configuration must provide a non-empty rtl list")
     for key, entries in (("include", includes_value), ("defines", defines)):
@@ -333,6 +390,15 @@ def _synth(args: argparse.Namespace) -> int:
 
     sources = _resolve_project_paths(project, rtl, "source file")
     includes = _resolve_project_paths(project, includes_value, "include directory")
+    liberty = _resolve_optional_project_file(project, liberty_value, "liberty")
+    abc_constraints = _resolve_optional_project_file(project, constraints_value, "abc_constraints")
+    if abc_constraints is not None and liberty is None:
+        raise ValueError("synth abc_constraints requires synth liberty for ABC technology mapping")
+    if delay_ps is not None:
+        if type(delay_ps) is not int or delay_ps <= 0:
+            raise ValueError("synth delay_ps must be a positive integer")
+        if liberty is None:
+            raise ValueError("synth delay_ps requires synth liberty for ABC technology mapping")
     for define in defines:
         if not DEFINE_RE.fullmatch(define):
             raise ValueError(f"invalid preprocessor definition: {define!r}")
@@ -355,7 +421,58 @@ def _synth(args: argparse.Namespace) -> int:
         include_dirs=includes,
         defines=defines,
         build_dir=build_dir,
+        liberty=liberty,
+        abc_constraints=abc_constraints,
+        delay_ps=delay_ps,
     )
+
+
+def _timing(args: argparse.Namespace) -> int:
+    project, settings = _project_and_settings(args, "timing")
+    top = _selected(args.top, settings, "top", None)
+    if not isinstance(top, str) or not TOP_RE.fullmatch(top):
+        raise ValueError(f"invalid or missing timing top module: {top!r}")
+
+    netlist_value = _selected(args.netlist, settings, "netlist", None)
+    liberty_value = _selected(args.liberty, settings, "liberty", None)
+    sdc_value = _selected(args.sdc, settings, "sdc", None)
+    spef_value = _selected(args.spef, settings, "spef", None)
+    netlist = _resolve_optional_project_file(project, netlist_value, "netlist", "timing")
+    liberty = _resolve_optional_project_file(project, liberty_value, "liberty", "timing")
+    sdc = _resolve_optional_project_file(project, sdc_value, "sdc", "timing")
+    spef = _resolve_optional_project_file(project, spef_value, "spef", "timing")
+    required_missing = [name for name, value in (("netlist", netlist), ("liberty", liberty), ("sdc", sdc)) if value is None]
+    if required_missing:
+        raise ValueError("timing configuration requires: " + ", ".join(required_missing))
+
+    build_value = args.build_dir if args.build_dir is not None else settings.get("build_dir", "build/timing")
+    if not isinstance(build_value, (str, Path)):
+        raise ValueError("timing build_dir must be a path string")
+    build_path = Path(build_value).expanduser()
+    build_dir = (project / build_path).resolve() if not build_path.is_absolute() and args.build_dir is None else build_path.resolve()
+
+    return run_opensta(
+        project=project,
+        top=top,
+        netlist=netlist,
+        liberty=liberty,
+        sdc=sdc,
+        spef=spef,
+        build_dir=build_dir,
+    )
+
+
+def _library_check(args: argparse.Namespace) -> int:
+    liberty = args.liberty.expanduser().resolve()
+    if not liberty.is_file():
+        raise ValueError(f"Liberty file does not exist or is not a file: {liberty}")
+    if args.build_dir is None:
+        build_dir = Path.cwd() / "build" / "liberty_check" / liberty.stem
+    else:
+        build_dir = args.build_dir.expanduser()
+        if not build_dir.is_absolute():
+            build_dir = Path.cwd() / build_dir
+    return check_liberty(liberty=liberty, build_dir=build_dir.resolve())
 
 
 def _add_synth_arguments(parser: argparse.ArgumentParser) -> None:
@@ -369,44 +486,75 @@ def _add_synth_arguments(parser: argparse.ArgumentParser) -> None:
                         help="Include directory (repeat as needed)")
     parser.add_argument("--define", action="append", default=None, metavar="NAME[=VALUE]",
                         help="Preprocessor definition (repeat as needed)")
+    parser.add_argument("--liberty", type=Path,
+                        help="Liberty cell library for technology mapping")
+    parser.add_argument("--abc-constraints", type=Path,
+                        help="Yosys ABC input-drive/output-load constraints file (requires --liberty)")
+    parser.add_argument("--delay-ps", type=int,
+                        help="ABC delay target in picoseconds (requires --liberty)")
     parser.add_argument("--build-dir", type=Path,
                         help="Synthesis output directory (default: build/<project>/<top>/synthesis)")
 
 
-def _init_project(path: Path, simulator: str) -> int:
+def _add_timing_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--config", type=Path, help="TOML project configuration file")
+    parser.add_argument("--project", type=Path,
+                        help="Project root; relative input paths are resolved from here")
+    parser.add_argument("--top", help="Top module in the synthesized netlist")
+    parser.add_argument("--netlist", type=Path, help="Synthesized gate-level Verilog netlist")
+    parser.add_argument("--liberty", type=Path, help="Liberty timing library")
+    parser.add_argument("--sdc", type=Path, help="SDC timing constraints file")
+    parser.add_argument("--spef", type=Path, help="Optional extracted parasitics file")
+    parser.add_argument("--build-dir", type=Path,
+                        help="Timing output directory (default: <project>/build/timing)")
+
+
+def _init_project(path: Path) -> int:
     project = path.expanduser().resolve()
     if project.exists() and any(project.iterdir()):
         raise ValueError(f"refusing to initialize a non-empty directory: {project}")
     project.mkdir(parents=True, exist_ok=True)
-    (project / "rtl").mkdir(exist_ok=True)
-    (project / "tb").mkdir(exist_ok=True)
-    rtl = """module and_gate (\n    input  logic a,\n    input  logic b,\n    output logic y\n);\n    assign y = a & b;\nendmodule\n"""
-    testbench = """module and_gate_tb;\n    logic a, b;\n    logic y;\n    integer i;\n    string waveform_file;\n\n    and_gate dut (.a(a), .b(b), .y(y));\n\n`ifdef VLSI_WAVEFORM\n    initial begin\n        if (!$value$plusargs(\"VLSI_WAVEFORM=%s\", waveform_file))\n            waveform_file = \"waveform.vcd\";\n        $dumpfile(waveform_file);\n        $dumpvars(0, and_gate_tb);\n    end\n`endif\n\n    initial begin\n        for (i = 0; i < 4; i = i + 1) begin\n            {a, b} = i[1:0];\n            #1;\n            if (y !== (a & b))\n                $fatal(1, \"AND mismatch a=%0b b=%0b y=%0b\", a, b, y);\n        end\n        $display(\"AND_GATE_TEST_PASSED\");\n        $finish;\n    end\nendmodule\n"""
-    (project / "rtl" / "and_gate.sv").write_text(rtl, encoding="utf-8")
-    (project / "tb" / "and_gate_tb.sv").write_text(testbench, encoding="utf-8")
-    manifest = f"""[project]\nroot = \".\"\n\n[run]\nsim = \"{simulator}\"\ntop = \"and_gate_tb\"\nrtl = [\"rtl/and_gate.sv\"]\ntb = [\"tb/and_gate_tb.sv\"]\nbuild_dir = \"build/run\"\nwaveform_file = \"waveforms/and_gate.vcd\"\njobs = 1\n\n[synth]\ntop = \"and_gate\"\nrtl = [\"rtl/and_gate.sv\"]\nbuild_dir = \"build/synth\"\n"""
-    (project / "vlsi.toml").write_text(manifest, encoding="utf-8")
-    (project / ".gitignore").write_text("build/\n", encoding="utf-8")
-    config_arg = shlex.quote(str(project / "vlsi.toml"))
-    (project / "README.md").write_text(
-        "# New VLSI project\n\n"
-        "Edit `rtl/and_gate.sv` and `tb/and_gate_tb.sv` as needed.\n\n"
-        "## Repeat runs with the project manifest\n\n"
-        "`--config vlsi.toml` loads saved project settings, including source lists "
-        "and top modules. From this project directory run:\n\n"
-        "These examples assume the toolkit checkout is the adjacent `../vlsi-toolkit` directory.\n\n"
-        "```bash\n../vlsi-toolkit/vlsi run --config vlsi.toml\n"
-        "../vlsi-toolkit/vlsi synth --config vlsi.toml\n```\n\n"
-        "## First run without a manifest\n\n"
-        "A manifest is optional for a first run. Pass the project root, top module, "
-        "and source files directly; repeat `--rtl` or `--tb` for additional files.\n\n"
-        "```bash\n../vlsi-toolkit/vlsi run --sim verilator --project . \\\n  --top and_gate_tb --rtl rtl/and_gate.sv --tb tb/and_gate_tb.sv\n\n"
-        "../vlsi-toolkit/vlsi synth --project . --top and_gate \\\n  --rtl rtl/and_gate.sv\n```\n",
-        encoding="utf-8",
+
+    directories = (
+        "config",
+        "rtl/include",
+        "tb/plain",
+        "tb/uvm/interfaces",
+        "tb/uvm/packages",
+        "tb/uvm/agents",
+        "tb/uvm/env",
+        "tb/uvm/sequences",
+        "tb/uvm/tests",
+        "tb/uvm/top",
+        "rtl/constraints/abc",
+        "rtl/constraints/sdc",
+        "scripts",
+        "tests/unit",
+        "tests/regression",
+        "build/sim/plain-verilator",
+        "build/sim/plain-iverilog",
+        "build/sim/uvm-verilator",
+        "build/synth/generic",
+        "build/synth/technology",
+        "build/timing",
     )
-    print(f"Created starter project: {project}")
-    print(f"Run:   ./vlsi run --config {config_arg}")
-    print(f"Synth: ./vlsi synth --config {config_arg}")
+    for relative in directories:
+        (project / relative).mkdir(parents=True, exist_ok=True)
+
+    template_scripts = REPO_ROOT / "templates" / "project" / "scripts"
+    for source in template_scripts.glob("*.sh"):
+        target = project / "scripts" / source.name
+        shutil.copy2(source, target)
+        target.chmod(target.stat().st_mode | 0o111)
+    shutil.copy2(REPO_ROOT / "templates" / "project" / ".gitignore", project / ".gitignore")
+
+    print(f"Created project directories and helper scripts: {project}")
+    print("Add your project manifests under config/ before running the helpers:")
+    print(f"  {project / 'config' / 'plain.toml'}")
+    print(f"  {project / 'config' / 'uvm.toml'}")
+    print(f"  {project / 'config' / 'synth.toml'}")
+    print(f"  {project / 'config' / 'timing.toml'}")
+    print(f"Scripts: {project / 'scripts'}")
     return 0
 
 
@@ -417,14 +565,35 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"vlsi {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("doctor", help="detect supported local EDA tools")
+    clean_parser = subparsers.add_parser(
+        "clean", help="remove build outputs and logs from a project directory"
+    )
+    clean_parser.add_argument(
+        "--dry-run", action="store_true",
+        help="show the project output paths that would be removed",
+    )
+    clean_parser.add_argument(
+        "--project", type=Path, default=None,
+        help="project root to clean (default: current working directory)",
+    )
     run_parser = subparsers.add_parser("run", help="compile and run an RTL testbench")
     _add_run_arguments(run_parser)
     synth_parser = subparsers.add_parser("synth", help="synthesize RTL with Yosys")
     _add_synth_arguments(synth_parser)
-    init_parser = subparsers.add_parser("init", help="create a runnable starter RTL project")
+    timing_parser = subparsers.add_parser("timing", help="analyze a synthesized netlist with OpenSTA")
+    _add_timing_arguments(timing_parser)
+    library_parser = subparsers.add_parser("library", help="validate an explicitly selected Liberty library")
+    library_subparsers = library_parser.add_subparsers(dest="library_command", required=True)
+    library_check_parser = library_subparsers.add_parser("check", help="parse a Liberty file with OpenSTA")
+    library_check_parser.add_argument("--liberty", type=Path, required=True, help="explicit Liberty library path")
+    library_check_parser.add_argument(
+        "--build-dir", type=Path,
+        help="directory for the validation script and log (default: build/liberty_check/<file>)",
+    )
+    init_parser = subparsers.add_parser(
+        "init", help="create an RTL project directory structure and helper scripts"
+    )
     init_parser.add_argument("path", type=Path, help="new or empty project directory")
-    init_parser.add_argument("--sim", choices=("iverilog", "verilator"), default="verilator",
-                             help="simulator to record in the starter manifest (default: verilator)")
     return parser
 
 
@@ -434,12 +603,18 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "doctor":
             return _doctor()
+        if args.command == "clean":
+            return _clean(args.project, dry_run=args.dry_run)
         if args.command == "run":
             return _run(args)
         if args.command == "synth":
             return _synth(args)
+        if args.command == "timing":
+            return _timing(args)
+        if args.command == "library" and args.library_command == "check":
+            return _library_check(args)
         if args.command == "init":
-            return _init_project(args.path, args.sim)
+            return _init_project(args.path)
     except (OSError, ValueError) as exc:
         print(f"vlsi: error: {exc}", file=sys.stderr)
         return 2
