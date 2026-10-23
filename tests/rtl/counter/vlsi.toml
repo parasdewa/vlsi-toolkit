@@ -1,0 +1,13 @@
+[project]
+root = "."
+
+[run]
+sim = "iverilog"
+top = "counter_tb"
+rtl = ["counter.sv"]
+tb = ["counter_tb.sv"]
+waveform_file = "waveforms/config_counter.vcd"
+
+[synth]
+top = "counter"
+rtl = ["counter.sv"]

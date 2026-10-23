@@ -1,0 +1,1 @@
+`define AND_GATE_OUTPUT_INVERT 1'b0

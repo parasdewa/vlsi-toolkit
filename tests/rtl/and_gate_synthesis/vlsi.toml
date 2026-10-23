@@ -1,0 +1,7 @@
+[project]
+root = "."
+
+[synth]
+top = "and_gate_top"
+rtl = ["../and_gate/and_gate.sv", "and_gate_top.sv"]
+include = ["include"]

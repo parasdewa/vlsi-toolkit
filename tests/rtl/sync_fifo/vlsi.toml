@@ -1,0 +1,12 @@
+[project]
+root = "."
+
+[run]
+sim = "iverilog"
+top = "sync_fifo_tb"
+rtl = ["sync_fifo.sv"]
+tb = ["sync_fifo_tb.sv"]
+
+[synth]
+top = "sync_fifo"
+rtl = ["sync_fifo.sv"]
