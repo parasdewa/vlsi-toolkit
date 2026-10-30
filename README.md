@@ -1,71 +1,87 @@
 # VLSI Toolkit
 
-A command-line toolkit for setting up and checking open-source EDA tools, then
-using them to simulate, synthesize, and time RTL projects. Verilator is the
-default simulator; Icarus Verilog is available with an explicit option. UVM
-simulation uses Verilator.
+The VLSI Toolkit helps you check and install open-source EDA tools, run
+simulation and synthesis flows, and analyze timing with OpenSTA. This README is
+organized as a four-phase path: check the tools, exercise toolkit fixtures,
+run the separate demo project, then create your own project.
 
-## Workflow at a glance
+## Four-phase workflow
 
-Follow these steps for a typical project:
+1. **Check and smoke-test the tools** in this toolkit repository.
+2. **Run toolkit fixtures manually** with Icarus, Verilator, UVM, Yosys, and
+   OpenSTA.
+3. **Run the same flows on the demo RTL repository.**
+4. **Create and configure your own RTL project.**
 
-1. Install or check the tools.
-2. Create a project or choose an existing one.
-3. Run RTL simulation, then inspect its waveform if needed.
-4. Run synthesis.
-5. If you have a compatible Liberty library and timing constraints, run OpenSTA.
-6. Run the toolkit regression suite after toolkit changes.
+Commands in Phases 1 and 2 assume the current directory is the root of
+`vlsi-toolkit`, unless a command says otherwise.
 
-Unless a step says otherwise, run commands from the toolkit repository root.
-For `run`, `synth`, and `timing`, the examples show both direct options and a
-TOML manifest. Use a manifest containing the matching section: for example,
-`vlsi.toml` for simulation and `vlsi_sky130_timing.toml` for mapped synthesis
-and timing. Setup, `doctor`, `init`, `library check`, GTKWave, regression, and
-cleanup are standalone commands and do not take a project TOML file.
+## Phase 1: Check, install, and smoke-test the tools
 
-## 1. Install and check the tools
+### 1. Check which tools are available
 
-For a supported Ubuntu or WSL setup, run the setup script. It checks for
-installed tools and installs/builds the missing supported tools:
-
-```bash
-scripts/tool_setup_and_check.sh
-```
-
-To inspect the current tool availability without installing anything:
+This read-only command reports the toolkit's tools and suggests setup steps
+when a required executable is missing:
 
 ```bash
 ./vlsi doctor
 ```
 
-The setup script supports `--check-only` and `--smoke-only` modes. See
-[Installation](docs/INSTALLATION.md) for what each mode does and the supported
-tool versions.
-
-## 2. Create or choose a project
-
-To create an empty project scaffold beside the toolkit:
+For a fuller setup check, use `--check-only`. It does not install tools or
+compile anything; it reports missing packages and available installation
+guidance:
 
 ```bash
-./vlsi init ../my_rtl_project
+scripts/tool_setup_and_check.sh --check-only
 ```
 
-The command creates directories for RTL, plain and UVM testbench sources,
-constraints, configuration, tests, and per-flow build outputs. It also adds
-plain simulation, UVM simulation, synthesis, and timing wrapper scripts plus a
-`.gitignore`. It does not create design files or TOML manifests; create those
-for your project. The wrappers expect `config/plain.toml`, `config/uvm.toml`,
-`config/synth.toml`, and `config/timing.toml`. To use the existing demo project,
-skip initialization and use its manifests.
+### 2. Install missing tools, then run the smoke suite
 
-The toolkit accepts projects outside its own repository. Project manifests
-(`vlsi.toml`) save source files, top modules, simulator settings, and build
-directories so commands stay short. See [Create and run a project](docs/NEW_PROJECT.md)
-and [Project configuration](docs/PROJECT_CONFIGURATION.md).
+On supported Ubuntu or WSL, the default setup command checks dependencies,
+installs missing Ubuntu packages, builds the supported Verilator/UVM and
+OpenSTA tools when needed, and then runs the smoke suite:
 
-## 3. Simulate the RTL
+```bash
+scripts/tool_setup_and_check.sh
+```
 
-Run the counter fixture by passing the project, top, and source files directly:
+The setup may use `sudo` to install packages. If the tools are already
+installed and you only want the smoke suite, run:
+
+```bash
+scripts/tool_setup_and_check.sh --smoke-only
+```
+
+The smoke suite checks these flows:
+
+| Check | Smoke coverage |
+| --- | --- |
+| Icarus Verilog | Compile and run the counter RTL with its non-UVM testbench |
+| Verilator | Compile and run that counter RTL and testbench |
+| Verilator UVM | Run the AND-gate UVM scoreboard test |
+| Yosys | Synthesize the counter and verify its netlists |
+| OpenSTA | Run timing analysis on a small synthetic Liberty/netlist fixture |
+| GTKWave | Confirm the executable is available; the GUI is not launched |
+
+The OpenSTA smoke check verifies that the timing tool runs. It does not time
+the counter RTL or install a PDK. Real RTL timing analysis with a selected
+Liberty library is covered in Phases 2 and 3. Setup logs and generated smoke
+outputs are stored under `build/tool_setup/`.
+
+For setup options, supported versions, and failure guidance, see
+[Installation and tool setup](docs/INSTALLATION.md) and
+[Troubleshooting](docs/TROUBLESHOOTING.md).
+
+## Phase 2: Run toolkit fixtures manually
+
+This phase runs individual commands so you can see each compile, simulation,
+synthesis, and timing result. The plain counter fixture is used for both
+simulators and for synthesis/timing. The separate AND-gate fixture provides
+the toolkit's UVM testbench.
+
+### 1. Simulate with Icarus Verilog
+
+Direct command:
 
 ```bash
 ./vlsi run --sim iverilog \
@@ -73,18 +89,20 @@ Run the counter fixture by passing the project, top, and source files directly:
   --top counter_tb \
   --rtl counter.sv \
   --tb counter_tb.sv \
-  --waveform \
-  --build-dir "$PWD/build/counter-iverilog"
+  --waveform-file waveforms/counter.vcd \
+  --build-dir "$PWD/build/phase-2/counter-iverilog"
 ```
 
-The equivalent manifest-based command is:
+Manifest command:
 
 ```bash
-./vlsi run --config tests/rtl/counter/vlsi.toml
+./vlsi run --config tests/rtl/counter/vlsi.toml \
+  --build-dir "$PWD/build/phase-2/counter-iverilog"
 ```
 
-The counter manifest selects Icarus. To select Verilator, either change the
-direct command's `--sim` value or override the manifest:
+### 2. Simulate with Verilator
+
+Direct command:
 
 ```bash
 ./vlsi run --sim verilator \
@@ -92,97 +110,88 @@ direct command's `--sim` value or override the manifest:
   --top counter_tb \
   --rtl counter.sv \
   --tb counter_tb.sv \
-  --waveform \
-  --build-dir "$PWD/build/counter-verilator"
-
-./vlsi run --config tests/rtl/counter/vlsi.toml --sim verilator
+  --waveform-file waveforms/counter.vcd \
+  --build-dir "$PWD/build/phase-2/counter-verilator"
 ```
 
-For the sibling demo project, the direct and manifest forms are:
+Manifest command:
 
 ```bash
-./vlsi run --sim verilator \
-  --project ../vlsi-toolkit-demo-rtl \
-  --top and_gate_tb \
-  --rtl rtl/and_gate.sv \
-  --tb tb/and_gate_tb.sv \
-  --waveform \
-  --build-dir "$PWD/build/demo-run"
-
-./vlsi run --config ../vlsi-toolkit-demo-rtl/vlsi.toml
-./vlsi run --config ../vlsi-toolkit-demo-rtl/vlsi.toml --sim iverilog
-./vlsi run --config ../vlsi-toolkit-demo-rtl/vlsi_uvm.toml
+./vlsi run --config tests/rtl/counter/vlsi.toml --sim verilator \
+  --build-dir "$PWD/build/phase-2/counter-verilator"
 ```
 
-For UVM without loading the demo's manifest, list all UVM source files:
+### 3. Run the UVM testbench with Verilator
+
+The UVM fixture is in `tests/uvm/and_gate/`. The run should print
+`AND_GATE_UVM_SCOREBOARD_PASSED`. UVM requires Verilator 5.052 or newer and
+the matching UVM 2020.3.2 sources. If the package is not discovered
+automatically, set `VERILATOR_UVM_DIR` to the directory containing
+`uvm_pkg_all_v2020_3_2_nodpi.svh`.
+
+Direct command:
 
 ```bash
 ./vlsi run --sim verilator --uvm --jobs 1 \
-  --project ../vlsi-toolkit-demo-rtl \
+  --project tests/uvm/and_gate \
   --top and_gate_tb_top \
   --rtl rtl/and_gate.sv \
   --tb tb/and_gate_if.sv \
   --tb tb/and_gate_pkg.sv \
   --tb tb/and_gate_tb_top.sv \
   --include tb \
-  --build-dir "$PWD/build/demo-uvm"
+  --build-dir "$PWD/build/phase-2/and-gate-uvm"
 ```
 
-The project created in the previous step is an empty scaffold. After adding
-your RTL, testbench, and `config/plain.toml`, run its plain flow with:
+Manifest command:
 
 ```bash
-cd ../my_rtl_project
-./scripts/run_plain.sh
+./vlsi run --config tests/uvm/and_gate/vlsi.toml \
+  --build-dir "$PWD/build/phase-2/and-gate-uvm"
 ```
 
-Create `config/uvm.toml` for the UVM flow and run `./scripts/run_uvm.sh`.
-See [Create and run a project](docs/NEW_PROJECT.md) for the directory layout,
-manifest path settings, and direct CLI examples.
+The manifest normally writes under `build/uvm-and-gate/`; the override above
+puts this run in the Phase 2 build directory.
 
-## 4. View a waveform
+### Inspect phase-2 waveforms
 
-When the testbench produces a VCD, open the generated file with GTKWave:
+Open the generated VCD files with GTKWave:
 
 ```bash
-gtkwave /path/to/waveform.vcd
+gtkwave "$PWD/build/phase-2/counter-iverilog/waveforms/counter.vcd"
+gtkwave "$PWD/build/phase-2/counter-verilator/waveforms/counter.vcd"
+gtkwave "$PWD/build/phase-2/and-gate-uvm/build/and_gate_uvm.vcd"
 ```
 
-The simulation output reports the waveform path. You can also pass
-`--waveform-file FILE` to choose its path. See [Waveforms](docs/WAVEFORMS.md)
-for waveform options and examples.
+The UVM testbench writes its VCD under a `build/` subdirectory inside the
+selected UVM build directory. GTKWave needs a working WSLg or X display.
 
-## 5. Synthesize the design
+### 4. Synthesize the counter with Yosys
 
-For generic synthesis, either pass the project and RTL directly:
+This is generic synthesis and does not require a technology library.
+
+Direct command:
 
 ```bash
 ./vlsi synth \
   --project tests/rtl/counter \
   --top counter \
   --rtl counter.sv \
-  --build-dir "$PWD/build/counter-generic"
+  --build-dir "$PWD/build/phase-2/counter-synth-generic"
 ```
 
-or load its project manifest:
+Manifest command:
 
 ```bash
-./vlsi synth --config tests/rtl/counter/vlsi.toml
+./vlsi synth --config tests/rtl/counter/vlsi.toml \
+  --build-dir "$PWD/build/phase-2/counter-synth-generic"
 ```
 
-This checks the synthesis flow and writes netlists and reports under the build
-directory. To map the design to a target standard-cell library, supply a
-compatible Liberty file. ABC's synthesis-time delay estimate can also be
-enabled with ABC driver/load constraints. See [Synthesis](docs/SYNTHESIS.md)
-for the generic and mapped flows.
+### 5. Map the counter and run OpenSTA timing
 
-## 6. Run static timing analysis
-
-OpenSTA analyzes a mapped gate-level netlist using the same target Liberty
-library and an SDC constraints file. The toolkit does not bundle a PDK or
-select a target library. This host has a Sky130 HD Liberty file at the path
-below; set `LIBERTY` to your own installed library on other systems, then
-validate it:
+OpenSTA analyzes a mapped gate-level netlist using a Liberty library and SDC
+constraints. Set `LIBERTY` to a compatible library installed on your system.
+The following path is the local Sky130 HD example on this host:
 
 ```bash
 source "$HOME/opt/opensta/opensta-env.sh"
@@ -190,7 +199,7 @@ export LIBERTY="$HOME/opt/pdk/sky130hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib"
 ./vlsi library check --liberty "$LIBERTY"
 ```
 
-Use direct options for mapped synthesis and OpenSTA timing:
+Direct commands; synthesis must finish before timing analysis:
 
 ```bash
 ./vlsi synth \
@@ -198,87 +207,303 @@ Use direct options for mapped synthesis and OpenSTA timing:
   --top counter \
   --rtl counter.sv \
   --liberty "$LIBERTY" \
-  --build-dir "$PWD/build/counter-synth"
+  --build-dir "$PWD/build/phase-2/counter-synth-sky130"
 
 ./vlsi timing \
   --project tests/rtl/counter \
   --top counter \
-  --netlist "$PWD/build/counter-synth/netlist.v" \
+  --netlist "$PWD/build/phase-2/counter-synth-sky130/netlist.v" \
   --liberty "$LIBERTY" \
   --sdc timing.sdc \
-  --build-dir "$PWD/build/counter-timing"
+  --build-dir "$PWD/build/phase-2/counter-timing"
 ```
 
-The equivalent commands load synthesis and timing settings from the same
-manifest:
+Manifest commands, with output paths overridden so they use the same isolated
+build locations:
 
 ```bash
-./vlsi synth --config tests/rtl/counter/vlsi_sky130_timing.toml
-./vlsi timing --config tests/rtl/counter/vlsi_sky130_timing.toml
+./vlsi synth --config tests/rtl/counter/vlsi_sky130_timing.toml \
+  --build-dir "$PWD/build/phase-2/counter-synth-sky130"
+
+./vlsi timing --config tests/rtl/counter/vlsi_sky130_timing.toml \
+  --netlist "$PWD/build/phase-2/counter-synth-sky130/netlist.v" \
+  --build-dir "$PWD/build/phase-2/counter-timing"
 ```
 
-The [timing manifest](tests/rtl/counter/vlsi_sky130_timing.toml) contains the
-RTL top and source, Liberty path, synthesis output directory, mapped netlist
-path, SDC path, and timing output directory. It uses the local Sky130 path
-shown above; edit both `liberty` entries in the TOML if your library is
-installed elsewhere. The mapped netlist, synthesis outputs, OpenSTA reports,
-and logs stay under `build/counter-synth/` and `build/counter-timing/` in this
-repository. These are example constraints, and without routed parasitics the
-report does not include wire delay. See [Timing analysis](docs/TIMING_ANALYSIS.md)
-for ABC delay estimates, report details, and the limits of this flow.
+The checked-in timing manifest uses the local Sky130 library path. Edit its
+`liberty` entries if your library is elsewhere. The toolkit does not install
+or select a PDK. ABC delay estimates are synthesis estimates; OpenSTA reports
+use the selected Liberty and SDC. Without routed parasitics, timing reports
+do not include wire delay. See [Synthesis](docs/SYNTHESIS.md) and
+[Timing analysis](docs/TIMING_ANALYSIS.md) for report interpretation.
 
-## 7. Run the toolkit regression suite
+## Phase 3: Run the demo RTL project
 
-After changing toolkit code, run the automated regression suite from the
-repository root:
-
-```bash
-python3 -m unittest discover -s tests/toolkit -v
-```
-
-Integration tests run when their EDA tools are available and use temporary
-build directories. The Verilator/UVM test can take several minutes. See
-[Regression checks](docs/TESTING.md) for coverage and build isolation.
-
-## Build outputs and cleanup
-
-Generated files are kept under each project's `build/`, `logs/`, or `log/`
-directory. `vlsi clean` targets the current working directory, so you can run
-the toolkit command from the RTL project to clean that project's outputs. For
-example, from the demo project:
+The separate [`vlsi-toolkit-demo-rtl`](../vlsi-toolkit-demo-rtl/) repository
+contains one AND-gate RTL design with plain and UVM testbenches, constraints,
+manifests, and flow scripts. Change into that repository before running the
+commands below:
 
 ```bash
 cd ../vlsi-toolkit-demo-rtl
+```
+
+### 1. Plain simulation with Icarus Verilog
+
+Direct command:
+
+```bash
+../vlsi-toolkit/vlsi run --sim iverilog \
+  --project . --top and_gate_tb \
+  --rtl rtl/and_gate.sv --tb tb/plain/and_gate_tb.sv \
+  --waveform-file waveforms/and_gate.vcd \
+  --build-dir "$PWD/build/phase-3/plain-iverilog"
+```
+
+Manifest command:
+
+```bash
+../vlsi-toolkit/vlsi run --config config/plain.toml --sim iverilog \
+  --build-dir "$PWD/build/phase-3/plain-iverilog"
+```
+
+### 2. Plain simulation with Verilator
+
+Direct command:
+
+```bash
+../vlsi-toolkit/vlsi run --sim verilator \
+  --project . --top and_gate_tb \
+  --rtl rtl/and_gate.sv --tb tb/plain/and_gate_tb.sv \
+  --waveform-file waveforms/and_gate.vcd \
+  --build-dir "$PWD/build/phase-3/plain-verilator"
+```
+
+Manifest command:
+
+```bash
+../vlsi-toolkit/vlsi run --config config/plain.toml --sim verilator \
+  --build-dir "$PWD/build/phase-3/plain-verilator"
+```
+
+### 3. UVM simulation with Verilator
+
+Direct command:
+
+```bash
+../vlsi-toolkit/vlsi run --sim verilator --uvm --jobs 1 \
+  --project . --top and_gate_tb_top \
+  --rtl rtl/and_gate.sv \
+  --tb tb/uvm/interfaces/and_gate_if.sv \
+  --tb tb/uvm/packages/and_gate_pkg.sv \
+  --tb tb/uvm/top/and_gate_tb_top.sv \
+  --include tb/uvm \
+  --waveform-file waveforms/and_gate_uvm.vcd \
+  --build-dir "$PWD/build/phase-3/uvm-verilator"
+```
+
+Manifest command:
+
+```bash
+../vlsi-toolkit/vlsi run --config config/uvm.toml \
+  --build-dir "$PWD/build/phase-3/uvm-verilator"
+```
+
+### Inspect phase-3 waveforms
+
+Open the plain and UVM simulation VCDs with GTKWave:
+
+```bash
+gtkwave "$PWD/build/phase-3/plain-iverilog/waveforms/and_gate.vcd"
+gtkwave "$PWD/build/phase-3/plain-verilator/waveforms/and_gate.vcd"
+gtkwave "$PWD/build/phase-3/uvm-verilator/waveforms/and_gate_uvm.vcd"
+```
+
+GTKWave needs a working WSLg or X display. Simulation logs also print output
+paths; use those if you choose different build directories.
+
+### 4. Generic synthesis with Yosys
+
+Direct command:
+
+```bash
+../vlsi-toolkit/vlsi synth --project . --top and_gate \
+  --rtl rtl/and_gate.sv \
+  --build-dir "$PWD/build/phase-3/synth-generic"
+```
+
+Manifest command:
+
+```bash
+../vlsi-toolkit/vlsi synth --config config/synth.toml \
+  --build-dir "$PWD/build/phase-3/synth-generic"
+```
+
+### 5. Mapped synthesis and OpenSTA timing
+
+Select a compatible Liberty library. This example uses the local Sky130 HD
+library; change the path if your installation differs:
+
+```bash
+source "$HOME/opt/opensta/opensta-env.sh"
+export LIBERTY="$HOME/opt/pdk/sky130hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib"
+../vlsi-toolkit/vlsi library check --liberty "$LIBERTY"
+```
+
+Direct commands:
+
+```bash
+../vlsi-toolkit/vlsi synth --project . --top and_gate \
+  --rtl rtl/and_gate.sv \
+  --liberty "$LIBERTY" \
+  --abc-constraints constraints/abc/and_gate.abc \
+  --delay-ps 10000 \
+  --build-dir "$PWD/build/phase-3/synth-sky130"
+
+../vlsi-toolkit/vlsi timing --project . --top and_gate \
+  --netlist "$PWD/build/phase-3/synth-sky130/netlist.v" \
+  --liberty "$LIBERTY" \
+  --sdc constraints/sdc/and_gate.sdc \
+  --build-dir "$PWD/build/phase-3/timing-sky130"
+```
+
+Manifest commands:
+
+```bash
+../vlsi-toolkit/vlsi synth --config config/timing.toml \
+  --build-dir "$PWD/build/phase-3/synth-sky130"
+
+../vlsi-toolkit/vlsi timing --config config/timing.toml \
+  --netlist "$PWD/build/phase-3/synth-sky130/netlist.v" \
+  --build-dir "$PWD/build/phase-3/timing-sky130"
+```
+
+The timing manifest also contains the host's example Liberty path. Update its
+`liberty` entries on another system. The demo's SDC values are examples, not
+design signoff constraints. See the
+[demo README](../vlsi-toolkit-demo-rtl/README.md) for waveform, output, and
+constraint details.
+
+## Phase 4: Create and configure your own project
+
+Return to the toolkit root and initialize a new, empty directory beside it:
+
+```bash
+cd ../vlsi-toolkit
+./vlsi init ../my_rtl_project
+```
+
+`vlsi init` creates this structure and adds the helper scripts, `.gitignore`,
+and an `initial-start.md` guide with first steps for adding sources and running
+the flows:
+
+```text
+my_rtl_project/
+├── initial-start.md
+├── config/
+├── rtl/include/
+├── constraints/
+│   ├── abc/
+│   └── sdc/
+├── tb/
+│   ├── plain/
+│   └── uvm/
+│       ├── interfaces/
+│       ├── packages/
+│       ├── agents/
+│       ├── env/
+│       ├── sequences/
+│       ├── tests/
+│       └── top/
+├── scripts/
+├── tests/
+│   ├── unit/
+│   └── regression/
+└── build/
+    ├── sim/
+    ├── synth/
+    └── timing/
+```
+
+### What `vlsi init` creates
+
+- Project directories for RTL, plain and UVM testbench code, constraints,
+  configuration, tests, and separated build flows.
+- Wrapper scripts: `scripts/run_plain.sh`, `scripts/run_uvm.sh`,
+  `scripts/synth.sh`, and `scripts/timing.sh`.
+- `initial-start.md`, which explains source placement, manifest edits, simulation, waveforms, synthesis, and timing.
+- A `.gitignore` for generated build, log, and report output.
+
+The wrappers find the toolkit CLI from `PATH`, from the adjacent
+`../vlsi-toolkit/vlsi`, or from an executable set in `VLSI_CLI`.
+
+### What you create and configure
+
+`vlsi init` intentionally does not create project RTL, testbench source,
+constraint contents, or TOML manifests. You add those files. The wrappers
+expect these manifests:
+
+| Manifest | Toolkit command | Required settings |
+| --- | --- | --- |
+| `config/plain.toml` | `vlsi run` | RTL, plain testbench, top, simulator, build directory |
+| `config/uvm.toml` | `vlsi run` | RTL, UVM source list/include, top, Verilator, build directory |
+| `config/synth.toml` | `vlsi synth` | Synthesizable RTL, top, build directory |
+| `config/timing.toml` | `vlsi timing` | Mapped netlist, Liberty, SDC, top, build directory |
+
+Since manifests live under `config/`, use `[project] root = ".."` so RTL and
+constraint paths resolve from the project root. Put ABC synthesis assumptions
+under `constraints/abc/` and SDC timing constraints under `constraints/sdc/`,
+separate from the RTL sources. Choose and install a compatible Liberty library
+yourself; the toolkit does not download a PDK. For UVM, install a supported
+Verilator/UVM package or set `VERILATOR_UVM_DIR` if automatic discovery fails.
+
+Once you have created the sources and manifests, run the flows from your
+project root:
+
+```bash
+cd ../my_rtl_project
+./scripts/run_plain.sh
+./scripts/run_plain.sh --sim iverilog
+./scripts/run_uvm.sh
+./scripts/synth.sh
+```
+
+For mapped timing, first run mapped synthesis using
+`../vlsi-toolkit/vlsi synth --config config/timing.toml`, then run
+`./scripts/timing.sh`. The timing wrapper only analyzes the netlist configured
+in `config/timing.toml`; it does not synthesize it.
+
+See [Create and run a project](docs/NEW_PROJECT.md) and
+[Project configuration](docs/PROJECT_CONFIGURATION.md) for manifest examples
+and path resolution.
+
+## Cleanup and further documentation
+
+From a project's root, preview and remove its generated output directories
+with:
+
+```bash
 ../vlsi-toolkit/vlsi clean --dry-run
 ../vlsi-toolkit/vlsi clean
 ```
 
-From the toolkit root, specify the demo path explicitly:
+The cleanup command removes that project's `build/`, `logs/`, and `log/`
+directories. To run the toolkit's automated regression suite after changing
+toolkit code:
 
 ```bash
-./vlsi clean --project ../vlsi-toolkit-demo-rtl --dry-run
-./vlsi clean --project ../vlsi-toolkit-demo-rtl
+cd ../vlsi-toolkit
+python3 -m unittest discover -s tests/toolkit -v
 ```
-
-Review the dry-run paths before cleaning. Only `build/`, `logs/`, and `log/`
-inside the selected project root are removed; custom build directories outside
-those paths are left alone. Running `./vlsi clean` from the toolkit root cleans
-the toolkit outputs.
-
-## Detailed guides
 
 | Guide | Topic |
 | --- | --- |
-| [Installation](docs/INSTALLATION.md) | Ubuntu/WSL setup and tool checks |
-| [Create and run a project](docs/NEW_PROJECT.md) | Starter projects and first runs |
-| [Compile and simulate](docs/COMPILATION_AND_SIMULATION.md) | Simulator options, UVM, and compile scripts |
-| [Project configuration](docs/PROJECT_CONFIGURATION.md) | TOML settings and CLI overrides |
+| [Installation](docs/INSTALLATION.md) | Supported tools, setup modes, and diagnostics |
+| [Create and run a project](docs/NEW_PROJECT.md) | Project layout and first runs |
+| [Compile and simulate](docs/COMPILATION_AND_SIMULATION.md) | Simulator options, UVM, and waveforms |
+| [Project configuration](docs/PROJECT_CONFIGURATION.md) | TOML fields and path resolution |
+| [Synthesis](docs/SYNTHESIS.md) | Yosys, Liberty mapping, and ABC estimates |
+| [Timing analysis](docs/TIMING_ANALYSIS.md) | OpenSTA, SDC, reports, and limitations |
 | [Waveforms](docs/WAVEFORMS.md) | VCD generation and GTKWave |
-| [Synthesis](docs/SYNTHESIS.md) | Yosys output, Liberty mapping, and ABC estimates |
-| [Timing analysis](docs/TIMING_ANALYSIS.md) | OpenSTA, SDC, Liberty, reports, and limitations |
-| [RTL examples](docs/RTL_EXAMPLES.md) | Included RTL fixtures |
 | [Regression checks](docs/TESTING.md) | Toolkit automated tests |
-| [Troubleshooting](docs/TROUBLESHOOTING.md) | Common setup and flow failures |
-| [Tool status](docs/TOOL_STATUS.md) | Recorded host/tool integration status |
-| [Setup verification report](docs/SETUP_VERIFICATION_REPORT.md) | Setup smoke-test results |
-| [Tool setup plan](docs/TOOL_SETUP_PLAN.md) | Setup implementation plan and history |
+| [Troubleshooting](docs/TROUBLESHOOTING.md) | Setup and flow failures |

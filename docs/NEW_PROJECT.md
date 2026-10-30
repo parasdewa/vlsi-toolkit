@@ -19,19 +19,20 @@ repository, create a project scaffold:
 ./vlsi init ../my_rtl_project
 ```
 
-The command creates directories and flow helper scripts, but no RTL, testbench,
-constraints, or TOML manifests. It refuses to write into a non-empty
+The command creates directories, flow helper scripts, `.gitignore`, and an
+`initial-start.md` guide, but no RTL, testbench, constraints, or TOML manifests.
+It refuses to write into a non-empty
 directory. The structure separates plain simulation sources, UVM components,
 constraints, configuration, scripts, tests, and generated build outputs:
 
 ```text
 my_rtl_project/
+├── initial-start.md            # first steps for adding sources and running flows
 ├── config/                     # user-created plain.toml, uvm.toml, synth.toml, timing.toml
-├── rtl/
-│   ├── include/
-│   └── constraints/             # ABC and SDC files live with the RTL
-│       ├── abc/
-│       └── sdc/
+├── rtl/include/
+├── constraints/                # kept separate from RTL source files
+│   ├── abc/
+│   └── sdc/
 ├── tb/plain/
 ├── tb/uvm/                     # interfaces, packages, agents, env, sequences, tests, top
 ├── scripts/                    # run_plain.sh, run_uvm.sh, synth.sh, timing.sh
@@ -40,7 +41,9 @@ my_rtl_project/
 └── build/                      # per-flow simulation, synthesis, timing outputs
 ```
 
-Create your design sources, timing constraints, and manifests in the matching
+Read `initial-start.md` in the new project first. It covers source placement,
+manifest setup, the wrapper scripts, waveforms, synthesis, and timing. Then
+create your design sources, constraint files, and manifests in the matching
 directories. The helper scripts expect `config/plain.toml`, `config/uvm.toml`,
 `config/synth.toml`, and `config/timing.toml`. For example:
 

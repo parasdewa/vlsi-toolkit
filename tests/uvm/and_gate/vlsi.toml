@@ -1,0 +1,12 @@
+[project]
+root = "."
+
+[run]
+sim = "verilator"
+uvm = true
+top = "and_gate_tb_top"
+rtl = ["rtl/and_gate.sv"]
+tb = ["tb/and_gate_if.sv", "tb/and_gate_pkg.sv", "tb/and_gate_tb_top.sv"]
+include = ["tb"]
+jobs = 1
+build_dir = "../../../build/uvm-and-gate"

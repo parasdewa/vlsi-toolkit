@@ -526,8 +526,8 @@ def _init_project(path: Path) -> int:
         "tb/uvm/sequences",
         "tb/uvm/tests",
         "tb/uvm/top",
-        "rtl/constraints/abc",
-        "rtl/constraints/sdc",
+        "constraints/abc",
+        "constraints/sdc",
         "scripts",
         "tests/unit",
         "tests/regression",
@@ -547,8 +547,13 @@ def _init_project(path: Path) -> int:
         shutil.copy2(source, target)
         target.chmod(target.stat().st_mode | 0o111)
     shutil.copy2(REPO_ROOT / "templates" / "project" / ".gitignore", project / ".gitignore")
+    shutil.copy2(
+        REPO_ROOT / "templates" / "project" / "initial-start.md",
+        project / "initial-start.md",
+    )
 
-    print(f"Created project directories and helper scripts: {project}")
+    print(f"Created project directories, helper scripts, and starter guide: {project}")
+    print(f"Read first: {project / 'initial-start.md'}")
     print("Add your project manifests under config/ before running the helpers:")
     print(f"  {project / 'config' / 'plain.toml'}")
     print(f"  {project / 'config' / 'uvm.toml'}")

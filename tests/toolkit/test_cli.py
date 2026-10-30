@@ -85,7 +85,7 @@ class ToolkitCliTests(unittest.TestCase):
                 "config", "rtl/include", "tb/plain", "tb/uvm/interfaces",
                 "tb/uvm/packages", "tb/uvm/agents", "tb/uvm/env",
                 "tb/uvm/sequences", "tb/uvm/tests", "tb/uvm/top",
-                "rtl/constraints/abc", "rtl/constraints/sdc", "tests/unit",
+                "constraints/abc", "constraints/sdc", "tests/unit",
                 "tests/regression", "build/sim/plain-verilator",
                 "build/sim/plain-iverilog", "build/sim/uvm-verilator",
                 "build/synth/generic", "build/synth/technology", "build/timing",
