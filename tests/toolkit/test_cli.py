@@ -219,8 +219,9 @@ class ToolkitCliTests(unittest.TestCase):
                 "--rtl", "counter.sv", "--build-dir", counter_output,
             )
             self.assertEqual(counter_result.returncode, 0, counter_result.stdout)
-            self.assertTrue((Path(counter_output) / "netlist.v").is_file())
-            counter_netlist = json.loads((Path(counter_output) / "netlist.json").read_text(encoding="utf-8"))
+            self.assertTrue((Path(counter_output) / "counter_netlist.v").is_file())
+            self.assertTrue((Path(counter_output) / "counter_abc_timing_report.txt").is_file())
+            counter_netlist = json.loads((Path(counter_output) / "counter_netlist.json").read_text(encoding="utf-8"))
             self.assertIn("counter", counter_netlist["modules"])
             self.assertIn("Found and reported 0 problems", counter_result.stdout)
 
@@ -231,7 +232,7 @@ class ToolkitCliTests(unittest.TestCase):
             )
             self.assertEqual(and_result.returncode, 0, and_result.stdout)
             self.assertIn("Found and reported 0 problems", and_result.stdout)
-            and_netlist = json.loads((Path(and_output) / "netlist.json").read_text(encoding="utf-8"))
+            and_netlist = json.loads((Path(and_output) / "and_gate_top_netlist.json").read_text(encoding="utf-8"))
             self.assertIn("and_gate_top", and_netlist["modules"])
 
         with tempfile.TemporaryDirectory(prefix="yosys-fifo-", dir=REGRESSION_ROOT) as fifo_output:
@@ -241,7 +242,7 @@ class ToolkitCliTests(unittest.TestCase):
             )
             self.assertEqual(fifo_result.returncode, 0, fifo_result.stdout)
             self.assertIn("Found and reported 0 problems", fifo_result.stdout)
-            fifo_netlist = json.loads((Path(fifo_output) / "netlist.json").read_text(encoding="utf-8"))
+            fifo_netlist = json.loads((Path(fifo_output) / "sync_fifo_netlist.json").read_text(encoding="utf-8"))
             self.assertIn("sync_fifo", fifo_netlist["modules"])
 
 

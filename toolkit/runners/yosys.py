@@ -30,8 +30,8 @@ def run_yosys(
 
     build_dir.mkdir(parents=True, exist_ok=True)
     script_path = build_dir / "synth.ys"
-    json_path = build_dir / "netlist.json"
-    verilog_path = build_dir / "netlist.v"
+    json_path = build_dir / f"{top}_netlist.json"
+    verilog_path = build_dir / f"{top}_netlist.v"
 
     # Source/output paths are quoted for Yosys. Its read_verilog frontend
     # expects include paths attached directly to -I, without embedded quotes.
@@ -73,7 +73,7 @@ def run_yosys(
     if result:
         return result
 
-    abc_report_path = build_dir / "abc_timing_report.txt"
+    abc_report_path = build_dir / f"{top}_abc_timing_report.txt"
     synth_log = (build_dir / "synth.log").read_text(encoding="utf-8", errors="replace")
     delay_lines = [
         line for line in synth_log.splitlines()

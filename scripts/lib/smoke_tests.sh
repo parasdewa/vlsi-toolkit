@@ -16,7 +16,7 @@ ts_run_smoke_tests() {
         ts_diagnose smoke "$root"
         return 1
     fi
-    if [[ ! -s "$synth_dir/netlist.json" || ! -s "$synth_dir/netlist.v" ]]; then
+    if [[ ! -s "$synth_dir/counter_netlist.json" || ! -s "$synth_dir/counter_netlist.v" ]]; then
         ts_error "Yosys returned without its expected JSON and Verilog netlists."
         ts_diagnose smoke "$root"
         return 1

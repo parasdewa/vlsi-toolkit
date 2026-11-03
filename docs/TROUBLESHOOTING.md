@@ -118,4 +118,4 @@ check WSLg or the X server before investigating the VCD itself.
 
 If Yosys fails, inspect
 `build/tool_setup/yosys/counter/synth.log`. The smoke test expects both
-`netlist.json` and `netlist.v` from the configured counter synthesis.
+`counter_netlist.json` and `counter_netlist.v` from the configured counter synthesis.

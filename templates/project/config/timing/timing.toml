@@ -4,7 +4,7 @@ root = "../.."
 
 [timing]
 top = "my_design"
-netlist = "build/synth/technology/netlist.v"
+netlist = "build/synth/technology/my_design_netlist.v"
 liberty = "/absolute/path/to/compatible_standard_cells.lib"
 sdc = "constraints/sdc/my_design.sdc"
 build_dir = "build/timing"

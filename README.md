@@ -218,7 +218,7 @@ Direct commands; synthesis must finish before timing analysis:
 ./vlsi timing \
   --project tests/rtl/counter \
   --top counter \
-  --netlist "$PWD/build/phase-2/counter-synth-sky130/netlist.v" \
+  --netlist "$PWD/build/phase-2/counter-synth-sky130/counter_netlist.v" \
   --liberty "$LIBERTY" \
   --sdc timing.sdc \
   --build-dir "$PWD/build/phase-2/counter-timing"
@@ -232,7 +232,7 @@ build locations:
   --build-dir "$PWD/build/phase-2/counter-synth-sky130"
 
 ./vlsi timing --config tests/rtl/counter/vlsi_sky130_timing.toml \
-  --netlist "$PWD/build/phase-2/counter-synth-sky130/netlist.v" \
+  --netlist "$PWD/build/phase-2/counter-synth-sky130/counter_netlist.v" \
   --build-dir "$PWD/build/phase-2/counter-timing"
 ```
 
@@ -367,7 +367,7 @@ Direct commands:
   --build-dir "$PWD/build/phase-3/synth-sky130"
 
 ../vlsi-toolkit/vlsi timing --project . --top and_gate \
-  --netlist "$PWD/build/phase-3/synth-sky130/netlist.v" \
+  --netlist "$PWD/build/phase-3/synth-sky130/and_gate_netlist.v" \
   --liberty "$LIBERTY" \
   --sdc constraints/sdc/and_gate.sdc \
   --build-dir "$PWD/build/phase-3/timing-sky130"
@@ -380,7 +380,7 @@ Manifest commands:
   --build-dir "$PWD/build/phase-3/synth-sky130"
 
 ../vlsi-toolkit/vlsi timing --config config/timing/and_gate.toml \
-  --netlist "$PWD/build/phase-3/synth-sky130/netlist.v" \
+  --netlist "$PWD/build/phase-3/synth-sky130/and_gate_netlist.v" \
   --build-dir "$PWD/build/phase-3/timing-sky130"
 ```
 
@@ -528,7 +528,8 @@ Create one TOML manifest per design and give each simulation a unique
 
 For mapped timing, add your Liberty and ABC constraint paths to
 `config/synthesis/synth.toml`, set its build directory to the technology-mapped
-output, and make `config/timing/timing.toml` point to that output's `netlist.v`.
+output, and make `config/timing/timing.toml` point to that output's
+`<top>_netlist.v`.
 Run `./scripts/synthesis/synth.sh` first, then `./scripts/timing/timing.sh`.
 The timing wrapper only analyzes the configured netlist; it does not synthesize it.
 

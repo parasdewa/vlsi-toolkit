@@ -47,7 +47,7 @@ build_dir = "build/synth"
 
 [timing]
 top = "counter"
-netlist = "build/synth/netlist.v"
+netlist = "build/synth/counter_netlist.v"
 liberty = "lib/standard_cells.lib"
 sdc = "constraints/counter.sdc"
 # Optional post-route parasitics:
@@ -87,7 +87,7 @@ For synthesis, `liberty` selects a target cell library. `abc_constraints` is
 Yosys ABC's two-line input-driver/output-load constraints file and requires
 `liberty`; `delay_ps` is an optional positive ABC delay target and also
 requires `liberty`. ABC emits its separate delay estimate in
-`abc_timing_report.txt` when `abc_constraints` is set. These are not a general
+`<top>_abc_timing_report.txt` when `abc_constraints` is set. These are not a general
 SDC interface. Paths are resolved from the project root. See
 [SYNTHESIS.md](SYNTHESIS.md) for details and limits.
 

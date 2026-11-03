@@ -18,7 +18,7 @@ The toolkit provides two timing-related stages:
 
 - `vlsi synth` uses Yosys/ABC for technology mapping. With a Liberty library
   and ABC input/output constraints, it saves ABC's synthesis-time combinational
-  delay estimate separately in `abc_timing_report.txt`.
+  delay estimate separately in `<top>_abc_timing_report.txt`.
 - `vlsi timing` runs OpenSTA against a mapped Verilog netlist, Liberty timing
   library, and SDC constraints. It writes a separate report containing timing
   paths, worst slack, and total negative slack.
@@ -99,7 +99,7 @@ ABC_CONSTRAINTS=/path/to/abc.constr
 ./vlsi timing \
   --project tests/rtl/counter \
   --top counter \
-  --netlist /tmp/counter-synth/netlist.v \
+  --netlist /tmp/counter-synth/counter_netlist.v \
   --liberty "$LIBERTY" \
   --sdc timing.sdc \
   --build-dir /tmp/counter-timing
@@ -129,7 +129,7 @@ For a project manifest, add:
 ```toml
 [timing]
 top = "counter"
-netlist = "/tmp/counter-synth/netlist.v"
+netlist = "/tmp/counter-synth/counter_netlist.v"
 liberty = "/path/to/standard_cells.lib"
 sdc = "timing.sdc"
 # Optional extracted parasitics:

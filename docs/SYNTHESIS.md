@@ -27,9 +27,9 @@ The command runs Yosys `read_verilog -sv`, hierarchy checks, the generic
 
 - `synth.ys`: reproducible Yosys command script
 - `synth.log`: full Yosys output and cell statistics
-- `netlist.json`: machine-readable synthesized design
-- `netlist.v`: synthesized Verilog
-- `abc_timing_report.txt`: ABC delay and path estimate when technology mapping
+- `<top>_netlist.json`: machine-readable synthesized design
+- `<top>_netlist.v`: synthesized Verilog
+- `<top>_abc_timing_report.txt`: ABC delay and path estimate when technology mapping
   runs (or a note explaining why ABC did not emit an estimate)
 
 Use `--include DIR` for include directories and `--define NAME[=VALUE]` for
@@ -109,7 +109,7 @@ Use [`vlsi timing`](TIMING_ANALYSIS.md) with OpenSTA for a separate static timin
 report from the mapped netlist and an SDC file.
 
 When `abc_constraints` is supplied, the synthesis build directory also gets
-`abc_timing_report.txt`. It contains ABC's synthesis-time delay estimate and
+`<top>_abc_timing_report.txt`. It contains ABC's synthesis-time delay estimate and
 the paths ABC reports under the selected input-driver/output-load assumptions.
 Without `abc_constraints`, ABC's default Yosys script does not emit a measured
 delay; the file records that no estimate was produced. This estimate is not

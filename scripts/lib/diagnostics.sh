@@ -36,7 +36,7 @@ ts_diagnose() {
             if [[ ! -s "$root/build/tool_setup/uvm/run/build/and_gate_uvm.vcd" ]]; then
                 ts_info "UVM waveform resolution: confirm --trace is present in scripts/compile_uvm.sh and that the UVM test completes."
             fi
-            if [[ ! -s "$root/build/tool_setup/yosys/counter/netlist.json" || ! -s "$root/build/tool_setup/yosys/counter/netlist.v" ]]; then
+            if [[ ! -s "$root/build/tool_setup/yosys/counter/counter_netlist.json" || ! -s "$root/build/tool_setup/yosys/counter/counter_netlist.v" ]]; then
                 ts_info "Yosys resolution: inspect build/tool_setup/yosys/counter/synth.log for frontend, hierarchy, or check errors."
             fi
             if ! grep -Rqs 'TIMING_STATUS PASS' "$root/build/tool_setup/opensta" 2>/dev/null; then

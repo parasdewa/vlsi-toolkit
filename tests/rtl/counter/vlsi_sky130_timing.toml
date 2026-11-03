@@ -11,7 +11,7 @@ build_dir = "../../../build/counter-synth"
 
 [timing]
 top = "counter"
-netlist = "../../../build/counter-synth/netlist.v"
+netlist = "../../../build/counter-synth/counter_netlist.v"
 liberty = "~/opt/pdk/sky130hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib"
 sdc = "timing.sdc"
 build_dir = "../../../build/counter-timing"
