@@ -1,0 +1,13 @@
+# Edit the top module and source paths to match your directed testbench.
+[project]
+root = "../../.."
+
+[run]
+sim = "verilator"
+uvm = false
+top = "my_directed_tb"
+rtl = ["rtl/my_design.sv"]
+tb = ["tb/directed/my_directed_tb.sv"]
+include = ["rtl/include"]
+waveform = true
+build_dir = "build/sim/plain-verilator"

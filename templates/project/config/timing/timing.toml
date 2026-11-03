@@ -1,0 +1,10 @@
+# Update the Liberty path and design-specific timing inputs before running.
+[project]
+root = "../.."
+
+[timing]
+top = "my_design"
+netlist = "build/synth/technology/netlist.v"
+liberty = "/absolute/path/to/compatible_standard_cells.lib"
+sdc = "constraints/sdc/my_design.sdc"
+build_dir = "build/timing"

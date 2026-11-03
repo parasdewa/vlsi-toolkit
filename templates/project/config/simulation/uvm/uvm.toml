@@ -1,0 +1,22 @@
+# Edit the top module and ordered source paths to match your UVM testbench.
+[project]
+root = "../../.."
+
+[run]
+sim = "verilator"
+uvm = true
+top = "my_uvm_top"
+rtl = ["rtl/my_design.sv"]
+tb = [
+  "tb/uvm/interfaces/my_if.sv",
+  "tb/uvm/packages/my_pkg.sv",
+  "tb/uvm/agents/my_agent.sv",
+  "tb/uvm/env/my_env.sv",
+  "tb/uvm/sequences/my_sequence.sv",
+  "tb/uvm/tests/my_test.sv",
+  "tb/uvm/top/my_uvm_top.sv",
+]
+include = ["rtl/include", "tb/uvm"]
+jobs = 1
+waveform_file = "waveforms/my_uvm_top.vcd"
+build_dir = "build/sim/uvm-verilator"

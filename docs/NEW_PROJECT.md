@@ -19,47 +19,85 @@ repository, create a project scaffold:
 ./vlsi init ../my_rtl_project
 ```
 
-The command creates directories, flow helper scripts, `.gitignore`, and an
-`initial-start.md` guide, but no RTL, testbench, constraints, or TOML manifests.
-It refuses to write into a non-empty
-directory. The structure separates plain simulation sources, UVM components,
+The command creates directories, flow helper scripts, a Makefile, `.gitignore`, an
+`initial-start.md` guide, and starter TOML manifests. It does not create RTL,
+testbench, or constraint source files, and it refuses to write into a non-empty
+directory. The structure separates directed simulation sources, UVM components,
 constraints, configuration, scripts, tests, and generated build outputs:
 
 ```text
 my_rtl_project/
+├── Makefile                   # short commands for common project flows
 ├── initial-start.md            # first steps for adding sources and running flows
-├── config/                     # user-created plain.toml, uvm.toml, synth.toml, timing.toml
+├── config/
+│   ├── simulation/
+│   │   ├── directed/directed.toml
+│   │   └── uvm/uvm.toml
+│   ├── synthesis/synth.toml
+│   └── timing/timing.toml
 ├── rtl/include/
 ├── constraints/                # kept separate from RTL source files
 │   ├── abc/
 │   └── sdc/
-├── tb/plain/
+├── tb/directed/
 ├── tb/uvm/                     # interfaces, packages, agents, env, sequences, tests, top
-├── scripts/                    # run_plain.sh, run_uvm.sh, synth.sh, timing.sh
+├── scripts/
+│   ├── _common.sh
+│   ├── simulation/
+│   │   ├── directed/run_directed.sh
+│   │   └── uvm/run_uvm.sh
+│   ├── synthesis/synth.sh
+│   └── timing/timing.sh
 ├── tests/unit/
 ├── tests/regression/
 └── build/                      # per-flow simulation, synthesis, timing outputs
 ```
 
 Read `initial-start.md` in the new project first. It covers source placement,
-manifest setup, the wrapper scripts, waveforms, synthesis, and timing. Then
-create your design sources, constraint files, and manifests in the matching
-directories. The helper scripts expect `config/plain.toml`, `config/uvm.toml`,
-`config/synth.toml`, and `config/timing.toml`. For example:
+editing the starter manifests, Makefile shortcuts, wrapper scripts, waveforms,
+synthesis, and timing. Add your design sources and constraint files in the matching
+directories, then edit the manifests to use your actual filenames and tops.
+By default, the helper scripts use `config/simulation/directed/directed.toml`,
+`config/simulation/uvm/uvm.toml`, `config/synthesis/synth.toml`, and
+`config/timing/timing.toml`. The starter source paths are examples and must be
+replaced before running the flows.
 
-Because these TOML files live one directory below the project root, set
-`[project] root = ".."` in each manifest. Set each flow's `build_dir` to the
-matching path under `build/` to keep outputs separated, for example
-`build_dir = "build/sim/plain-verilator"` under `[run]`.
+Set `[project] root = "../../.."` in simulation manifests and
+`[project] root = "../.."` in synthesis and timing manifests. Set each flow's
+`build_dir` to the matching path under `build/` to keep outputs separated, for
+example `build_dir = "build/sim/plain-verilator"` under `[run]`.
 
 ```bash
 cd ../my_rtl_project
-./scripts/run_plain.sh
-./scripts/run_plain.sh --sim iverilog
-./scripts/run_uvm.sh
-./scripts/synth.sh
-./scripts/timing.sh
+make help
+make sim
+make sim DESIGN=counter_4bit SIM=iverilog
+make synth DESIGN=counter_4bit
+make synth-mapped DESIGN=counter_4bit
+make timing DESIGN=counter_4bit
+make clean-dry-run
 ```
+
+These Makefile commands select matching design-named manifests when `DESIGN`
+is set; create those TOML files first. `CONFIG=path/to/manifest.toml` and
+`WAVEFORM=path/to/file.vcd` override the selected paths when needed. The
+default targets use starter manifests. You can also call the wrappers directly:
+
+```bash
+./scripts/simulation/directed/run_directed.sh
+./scripts/simulation/directed/run_directed.sh --sim iverilog
+./scripts/simulation/directed/run_directed.sh config/simulation/directed/counter_4bit.toml
+./scripts/simulation/directed/run_directed.sh config/simulation/directed/counter_4bit.toml --sim iverilog
+./scripts/simulation/uvm/run_uvm.sh
+./scripts/synthesis/synth.sh
+./scripts/synthesis/synth.sh config/synthesis/counter_4bit.toml
+./scripts/timing/timing.sh
+./scripts/timing/timing.sh config/timing/counter_4bit.toml
+```
+
+Each wrapper accepts a manifest path as its first argument, or as
+`--config MANIFEST.toml`; without one, it uses the default manifest. Keep a
+manifest per design and assign each run its own `build_dir`.
 
 The wrappers call `vlsi` from `PATH`, use `../vlsi-toolkit/vlsi` when the
 project sits beside the toolkit, or use an executable specified by `VLSI_CLI`.
@@ -71,7 +109,7 @@ manifest, call the toolkit directly and provide your source files explicitly:
   --project . \
   --top my_testbench \
   --rtl rtl/my_design.sv \
-  --tb tb/plain/my_testbench.sv
+  --tb tb/directed/my_testbench.sv
 
 ../vlsi-toolkit/vlsi synth \
   --project . \

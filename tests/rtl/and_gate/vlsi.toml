@@ -1,0 +1,14 @@
+[project]
+root = "."
+
+[run]
+sim = "verilator"
+top = "and_gate_tb"
+rtl = ["and_gate.sv"]
+tb = ["and_gate_tb.sv"]
+build_dir = "../../../build/and-gate-sim"
+
+[synth]
+top = "and_gate"
+rtl = ["and_gate.sv"]
+build_dir = "../../../build/and-gate-synth"

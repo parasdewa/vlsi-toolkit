@@ -1,0 +1,16 @@
+# Edit the design top and RTL paths. Keep testbench files out of this list.
+[project]
+root = "../.."
+
+[synth]
+top = "my_design"
+rtl = ["rtl/my_design.sv"]
+include = ["rtl/include"]
+build_dir = "build/synth/generic"
+
+# For standard-cell mapping and OpenSTA timing, add the following settings,
+# using a Liberty file and ABC constraints compatible with your target:
+# liberty = "/absolute/path/to/compatible_standard_cells.lib"
+# abc_constraints = "constraints/abc/my_design.abc"
+# delay_ps = 10000
+# build_dir = "build/synth/technology"

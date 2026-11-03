@@ -516,9 +516,12 @@ def _init_project(path: Path) -> int:
     project.mkdir(parents=True, exist_ok=True)
 
     directories = (
-        "config",
+        "config/simulation/directed",
+        "config/simulation/uvm",
+        "config/synthesis",
+        "config/timing",
         "rtl/include",
-        "tb/plain",
+        "tb/directed",
         "tb/uvm/interfaces",
         "tb/uvm/packages",
         "tb/uvm/agents",
@@ -528,7 +531,10 @@ def _init_project(path: Path) -> int:
         "tb/uvm/top",
         "constraints/abc",
         "constraints/sdc",
-        "scripts",
+        "scripts/simulation/directed",
+        "scripts/simulation/uvm",
+        "scripts/synthesis",
+        "scripts/timing",
         "tests/unit",
         "tests/regression",
         "build/sim/plain-verilator",
@@ -542,24 +548,30 @@ def _init_project(path: Path) -> int:
         (project / relative).mkdir(parents=True, exist_ok=True)
 
     template_scripts = REPO_ROOT / "templates" / "project" / "scripts"
-    for source in template_scripts.glob("*.sh"):
-        target = project / "scripts" / source.name
+    for source in template_scripts.rglob("*.sh"):
+        target = project / "scripts" / source.relative_to(template_scripts)
         shutil.copy2(source, target)
         target.chmod(target.stat().st_mode | 0o111)
+    template_configs = REPO_ROOT / "templates" / "project" / "config"
+    for source in template_configs.rglob("*.toml"):
+        target = project / "config" / source.relative_to(template_configs)
+        shutil.copy2(source, target)
     shutil.copy2(REPO_ROOT / "templates" / "project" / ".gitignore", project / ".gitignore")
+    shutil.copy2(REPO_ROOT / "templates" / "project" / "Makefile", project / "Makefile")
     shutil.copy2(
         REPO_ROOT / "templates" / "project" / "initial-start.md",
         project / "initial-start.md",
     )
 
-    print(f"Created project directories, helper scripts, and starter guide: {project}")
+    print(f"Created project directories, helper scripts, Makefile, and starter guide: {project}")
     print(f"Read first: {project / 'initial-start.md'}")
-    print("Add your project manifests under config/ before running the helpers:")
-    print(f"  {project / 'config' / 'plain.toml'}")
-    print(f"  {project / 'config' / 'uvm.toml'}")
-    print(f"  {project / 'config' / 'synth.toml'}")
-    print(f"  {project / 'config' / 'timing.toml'}")
+    print("Edit these project manifests to match your design before running the helpers:")
+    print(f"  {project / 'config' / 'simulation' / 'directed' / 'directed.toml'}")
+    print(f"  {project / 'config' / 'simulation' / 'uvm' / 'uvm.toml'}")
+    print(f"  {project / 'config' / 'synthesis' / 'synth.toml'}")
+    print(f"  {project / 'config' / 'timing' / 'timing.toml'}")
     print(f"Scripts: {project / 'scripts'}")
+    print("Run 'make help' in the project to see the short flow commands.")
     return 0
 
 

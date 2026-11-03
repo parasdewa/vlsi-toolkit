@@ -30,11 +30,31 @@ resolve_vlsi_cli() {
 
 run_with_config() {
   local command_name="$1"
-  local config_path="$2"
+  local default_config="$2"
   shift 2
 
-  if [[ ! -f "$PROJECT_ROOT/$config_path" ]]; then
-    echo "Missing project manifest: $PROJECT_ROOT/$config_path" >&2
+  local config_path="$default_config"
+  if [[ "${1:-}" == "--config" ]]; then
+    if [[ "$#" -lt 2 || -z "${2:-}" ]]; then
+      echo "Usage: $0 [MANIFEST.toml | --config MANIFEST.toml] [vlsi options]" >&2
+      return 2
+    fi
+    config_path="$2"
+    shift 2
+  elif [[ "${1:-}" == *.toml ]]; then
+    config_path="$1"
+    shift
+  fi
+
+  local config_file
+  if [[ "$config_path" == /* ]]; then
+    config_file="$config_path"
+  else
+    config_file="$PROJECT_ROOT/$config_path"
+  fi
+
+  if [[ ! -f "$config_file" ]]; then
+    echo "Missing project manifest: $config_file" >&2
     echo "Create that TOML file with the settings for: vlsi $command_name" >&2
     return 2
   fi
@@ -42,5 +62,5 @@ run_with_config() {
   local cli
   cli="$(resolve_vlsi_cli)"
   cd "$PROJECT_ROOT"
-  exec "$cli" "$command_name" --config "$config_path" "$@"
+  exec "$cli" "$command_name" --config "$config_file" "$@"
 }

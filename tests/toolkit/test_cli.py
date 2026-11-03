@@ -82,22 +82,32 @@ class ToolkitCliTests(unittest.TestCase):
             initialized = self.invoke("init", str(project))
             self.assertEqual(initialized.returncode, 0, initialized.stdout)
             expected_directories = (
-                "config", "rtl/include", "tb/plain", "tb/uvm/interfaces",
+                "config/simulation/directed", "config/simulation/uvm",
+                "config/synthesis", "config/timing", "rtl/include", "tb/directed", "tb/uvm/interfaces",
                 "tb/uvm/packages", "tb/uvm/agents", "tb/uvm/env",
                 "tb/uvm/sequences", "tb/uvm/tests", "tb/uvm/top",
                 "constraints/abc", "constraints/sdc", "tests/unit",
                 "tests/regression", "build/sim/plain-verilator",
                 "build/sim/plain-iverilog", "build/sim/uvm-verilator",
                 "build/synth/generic", "build/synth/technology", "build/timing",
+                "scripts/simulation/directed", "scripts/simulation/uvm",
+                "scripts/synthesis", "scripts/timing",
             )
             for relative in expected_directories:
                 self.assertTrue((project / relative).is_dir(), relative)
-            for script in ("run_plain.sh", "run_uvm.sh", "synth.sh", "timing.sh"):
+            for script in (
+                "simulation/directed/run_directed.sh", "simulation/uvm/run_uvm.sh",
+                "synthesis/synth.sh", "timing/timing.sh",
+            ):
                 script_path = project / "scripts" / script
                 self.assertTrue(script_path.is_file(), script)
                 self.assertTrue(script_path.stat().st_mode & 0o111, script)
             self.assertFalse((project / "rtl" / "and_gate.sv").exists())
-            self.assertFalse((project / "config" / "plain.toml").exists())
+            for manifest in (
+                "simulation/directed/directed.toml", "simulation/uvm/uvm.toml",
+                "synthesis/synth.toml", "timing/timing.toml",
+            ):
+                self.assertTrue((project / "config" / manifest).is_file(), manifest)
             self.assertTrue((project / ".gitignore").is_file())
 
     @unittest.skipUnless(shutil.which("iverilog") and shutil.which("vvp"), "Icarus is not installed")
