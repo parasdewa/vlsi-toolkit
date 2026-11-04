@@ -407,6 +407,7 @@ the flows:
 my_rtl_project/
 ├── Makefile
 ├── initial-start.md
+├── AGENTS.md
 ├── config/
 │   ├── simulation/
 │   │   ├── directed/directed.toml
@@ -454,6 +455,7 @@ my_rtl_project/
 - Starter manifests for directed simulation, UVM simulation, synthesis, and
   timing under `config/`.
 - `initial-start.md`, which uses a 4-bit adder example to show source placement, per-flow manifest fields, simulation, waveform viewing, synthesis, and timing.
+- `AGENTS.md` with shared flow-assistant rules for Codex and Claude Code.
 - A `.gitignore` for generated build, log, and report output.
 
 The wrappers find the toolkit CLI from `PATH`, from the adjacent

@@ -4,6 +4,8 @@ This guide shows how to add one design and its testbenches to a project made
 with `vlsi init`. Run commands from the project root. For a multi-file RTL
 design, list dependency modules before the top module. The testbench top is the
 module named by the simulation manifest; it may differ from the RTL top.
+Codex and Claude Code can both use the shared flow-assistant rules in
+`AGENTS.md`.
 
 ## 1. Put files in the project directories
 

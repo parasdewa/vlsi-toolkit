@@ -29,6 +29,7 @@ constraints, configuration, scripts, tests, and generated build outputs:
 my_rtl_project/
 ├── Makefile                   # short commands for common project flows
 ├── initial-start.md            # first steps for adding sources and running flows
+├── AGENTS.md                   # shared flow-assistant rules for Codex and Claude Code
 ├── config/
 │   ├── simulation/
 │   │   ├── directed/directed.toml
@@ -59,6 +60,7 @@ and the Make commands for simulation, waveform viewing, generic synthesis,
 mapped synthesis, and timing. Add your source and constraint files in the
 matching directories, then edit the manifests to use your actual filenames
 and module tops.
+`AGENTS.md` gives Codex and Claude Code the same flow-setup workflow.
 By default, the helper scripts use `config/simulation/directed/directed.toml`,
 `config/simulation/uvm/uvm.toml`, `config/synthesis/synth.toml`, and
 `config/timing/timing.toml`. The starter source paths are examples and must be

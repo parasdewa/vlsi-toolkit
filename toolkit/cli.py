@@ -562,8 +562,12 @@ def _init_project(path: Path) -> int:
         REPO_ROOT / "templates" / "project" / "initial-start.md",
         project / "initial-start.md",
     )
+    shutil.copy2(REPO_ROOT / "templates" / "project" / "AGENTS.md", project / "AGENTS.md")
 
-    print(f"Created project directories, helper scripts, Makefile, and starter guide: {project}")
+    print(
+        f"Created project directories, helper scripts, Makefile, starter guide, "
+        f"and shared Codex/Claude Code instructions: {project}"
+    )
     print(f"Read first: {project / 'initial-start.md'}")
     print("Edit these project manifests to match your design before running the helpers:")
     print(f"  {project / 'config' / 'simulation' / 'directed' / 'directed.toml'}")
