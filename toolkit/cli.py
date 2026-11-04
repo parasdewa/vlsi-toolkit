@@ -54,7 +54,7 @@ def _add_run_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--sim-arg", action="append", default=None, metavar="ARG",
                         help="Argument passed to the simulator executable (repeat as needed)")
     parser.add_argument("--waveform", action=argparse.BooleanOptionalAction, default=None,
-                        help="write build/<project>/<top>/waveform.vcd (testbench must support VLSI_WAVEFORM)")
+                        help="write a VCD named after the simulation top (testbench must support VLSI_WAVEFORM)")
     parser.add_argument("--waveform-file", type=Path,
                         help="custom VCD path (relative paths are resolved from the build directory)")
     parser.add_argument("--jobs", type=int, choices=(1, 2),
@@ -341,7 +341,7 @@ def _run(args: argparse.Namespace) -> int:
         waveform_path = Path(waveform_file).expanduser()
         waveform_path = (build_dir / waveform_path).resolve() if not waveform_path.is_absolute() else waveform_path.resolve()
     elif waveform:
-        waveform_path = build_dir / "waveform.vcd"
+        waveform_path = build_dir / f"{top}.vcd"
     else:
         waveform_path = None
 

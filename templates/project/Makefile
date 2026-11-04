@@ -11,8 +11,9 @@ DIRECTED_CONFIG ?= $(if $(strip $(CONFIG)),$(CONFIG),$(if $(strip $(DESIGN)),con
 UVM_CONFIG ?= $(if $(strip $(CONFIG)),$(CONFIG),$(if $(strip $(DESIGN)),config/simulation/uvm/$(DESIGN).toml,config/simulation/uvm/uvm.toml))
 SYNTH_CONFIG ?= $(if $(strip $(CONFIG)),$(CONFIG),$(if $(strip $(DESIGN)),config/synthesis/$(DESIGN).toml,config/synthesis/synth.toml))
 TIMING_CONFIG ?= $(if $(strip $(CONFIG)),$(CONFIG),$(if $(strip $(DESIGN)),config/timing/$(DESIGN).toml,config/timing/timing.toml))
-WAVEFORM ?= $(if $(strip $(DESIGN)),build/sim/$(DESIGN)-$(SIMULATOR)/waveforms/$(DESIGN).vcd,$(if $(strip $(SIM)),build/sim/directed-$(SIM)/waveform.vcd,build/sim/plain-verilator/waveform.vcd))
+SIM_WAVEFORM ?= $(if $(strip $(DESIGN)),build/sim/$(DESIGN)-$(SIMULATOR)/waveforms/$(DESIGN).vcd,$(if $(strip $(SIM)),build/sim/directed-$(SIM)/waveforms/my_directed_tb.vcd,build/sim/plain-verilator/waveforms/my_directed_tb.vcd))
 UVM_WAVEFORM ?= $(if $(strip $(DESIGN)),build/sim/$(DESIGN)-uvm-verilator/waveforms/$(DESIGN)_uvm.vcd,build/sim/uvm-verilator/waveforms/my_uvm_top.vcd)
+WAVEFORM ?=
 LIBERTY ?=
 
 SIM_OPTION = $(if $(strip $(SIM)),--sim "$(SIM)",)
@@ -61,7 +62,7 @@ synth:
 	./scripts/synthesis/synth.sh "$(SYNTH_CONFIG)"
 
 synth-mapped:
-	./scripts/synthesis/synth.sh "$(SYNTH_CONFIG)"
+	./scripts/synthesis/synth.sh "$(TIMING_CONFIG)"
 
 timing:
 	./scripts/timing/timing.sh "$(TIMING_CONFIG)"
@@ -71,7 +72,7 @@ library-check:
 	$(VLSI) library check --liberty "$(LIBERTY)"
 
 wave:
-	gtkwave "$(WAVEFORM)"
+	gtkwave "$(if $(strip $(WAVEFORM)),$(WAVEFORM),$(SIM_WAVEFORM))"
 
 wave-uvm:
 	gtkwave "$(if $(strip $(WAVEFORM)),$(WAVEFORM),$(UVM_WAVEFORM))"

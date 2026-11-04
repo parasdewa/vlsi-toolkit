@@ -1,12 +1,16 @@
 # Edit the top module and ordered source paths to match your UVM testbench.
 [project]
+# Keep this value for manifests in config/simulation/uvm/.
 root = "../../.."
 
 [run]
 sim = "verilator"
 uvm = true
+# UPDATE: name of the UVM top module.
 top = "my_uvm_top"
+# UPDATE: list every synthesizable RTL source in dependency order.
 rtl = ["rtl/my_design.sv"]
+# UPDATE: replace with your UVM files, ordered from dependencies to top.
 tb = [
   "tb/uvm/interfaces/my_if.sv",
   "tb/uvm/packages/my_pkg.sv",
@@ -16,7 +20,10 @@ tb = [
   "tb/uvm/tests/my_test.sv",
   "tb/uvm/top/my_uvm_top.sv",
 ]
+# UPDATE: add include directories used by your sources.
 include = ["rtl/include", "tb/uvm"]
+# Keep jobs low on memory-limited machines.
 jobs = 1
+# UPDATE: VCD filename and unique UVM build directory.
 waveform_file = "waveforms/my_uvm_top.vcd"
 build_dir = "build/sim/uvm-verilator"

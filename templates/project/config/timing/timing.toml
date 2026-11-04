@@ -1,10 +1,31 @@
-# Update the Liberty path and design-specific timing inputs before running.
+# Update the design top, source list, library path, and constraints before use.
 [project]
+# Keep this value for manifests in config/timing/.
 root = "../.."
 
-[timing]
+# Used by: make synth-mapped DESIGN=my_design
+[synth]
+# UPDATE: RTL top module and ordered source list; do not include testbench files.
 top = "my_design"
-netlist = "build/synth/technology/my_design_netlist.v"
+rtl = ["rtl/my_design.sv"]
+include = ["rtl/include"]
+# UPDATE: use a Liberty file compatible with the target and mapped cells.
 liberty = "/absolute/path/to/compatible_standard_cells.lib"
+# UPDATE: create an ABC assumptions file for this design/library.
+abc_constraints = "constraints/abc/my_design.abc"
+# UPDATE: desired ABC mapping delay, in picoseconds.
+delay_ps = 10000
+# UPDATE: technology-mapped synthesis output directory.
+build_dir = "build/synth/technology/my_design"
+
+# Used by: make timing DESIGN=my_design
+[timing]
+# UPDATE: keep the same design top and Liberty as in [synth].
+top = "my_design"
+# UPDATE: point to <top>_netlist.v in the [synth] build_dir above.
+netlist = "build/synth/technology/my_design/my_design_netlist.v"
+liberty = "/absolute/path/to/compatible_standard_cells.lib"
+# UPDATE: create the design's SDC clock and I/O timing constraints.
 sdc = "constraints/sdc/my_design.sdc"
-build_dir = "build/timing"
+# UPDATE: timing report output directory.
+build_dir = "build/timing/my_design"

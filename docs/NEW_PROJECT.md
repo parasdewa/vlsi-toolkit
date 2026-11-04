@@ -53,10 +53,12 @@ my_rtl_project/
 └── build/                      # per-flow simulation, synthesis, timing outputs
 ```
 
-Read `initial-start.md` in the new project first. It covers source placement,
-editing the starter manifests, Makefile shortcuts, wrapper scripts, waveforms,
-synthesis, and timing. Add your design sources and constraint files in the matching
-directories, then edit the manifests to use your actual filenames and tops.
+Read `initial-start.md` in the new project first. Its 4-bit adder example shows
+where RTL and directed/UVM testbench sources go, which manifest fields to edit,
+and the Make commands for simulation, waveform viewing, generic synthesis,
+mapped synthesis, and timing. Add your source and constraint files in the
+matching directories, then edit the manifests to use your actual filenames
+and module tops.
 By default, the helper scripts use `config/simulation/directed/directed.toml`,
 `config/simulation/uvm/uvm.toml`, `config/synthesis/synth.toml`, and
 `config/timing/timing.toml`. The starter source paths are examples and must be
@@ -72,6 +74,9 @@ cd ../my_rtl_project
 make help
 make sim
 make sim DESIGN=counter_4bit SIM=iverilog
+make wave DESIGN=counter_4bit SIM=iverilog
+make uvm DESIGN=my_uvm_design
+make wave-uvm DESIGN=my_uvm_design
 make synth DESIGN=counter_4bit
 make synth-mapped DESIGN=counter_4bit
 make timing DESIGN=counter_4bit

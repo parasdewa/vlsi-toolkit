@@ -1,13 +1,22 @@
 # Edit the top module and source paths to match your directed testbench.
 [project]
+# Keep this value for manifests in config/simulation/directed/.
 root = "../../.."
 
 [run]
+# Change to "iverilog" if you want Icarus as the default simulator.
 sim = "verilator"
 uvm = false
+# UPDATE: name of the directed testbench module (not the RTL top).
 top = "my_directed_tb"
+# UPDATE: list every RTL file in compile dependency order.
 rtl = ["rtl/my_design.sv"]
+# UPDATE: directed testbench file(s).
 tb = ["tb/directed/my_directed_tb.sv"]
+# UPDATE: add include directories if the design/testbench uses them.
 include = ["rtl/include"]
 waveform = true
+# UPDATE: choose the VCD name; keep it aligned with make wave DESIGN=name.
+waveform_file = "waveforms/my_directed_tb.vcd"
+# UPDATE: use a unique build directory for this design.
 build_dir = "build/sim/plain-verilator"

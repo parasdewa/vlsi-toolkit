@@ -453,7 +453,7 @@ my_rtl_project/
   `scripts/synthesis/`, and `scripts/timing/`.
 - Starter manifests for directed simulation, UVM simulation, synthesis, and
   timing under `config/`.
-- `initial-start.md`, which explains source placement, manifest edits, simulation, waveforms, synthesis, and timing.
+- `initial-start.md`, which uses a 4-bit adder example to show source placement, per-flow manifest fields, simulation, waveform viewing, synthesis, and timing.
 - A `.gitignore` for generated build, log, and report output.
 
 The wrappers find the toolkit CLI from `PATH`, from the adjacent
@@ -468,6 +468,7 @@ make help
 make sim
 make sim DESIGN=counter_4bit SIM=iverilog
 make uvm DESIGN=my_uvm_design
+make wave-uvm DESIGN=my_uvm_design
 make synth DESIGN=counter_4bit
 make synth-mapped DESIGN=counter_4bit
 make timing DESIGN=counter_4bit
@@ -477,6 +478,12 @@ make clean-dry-run
 
 The default manifests are placeholders in an empty scaffold. For each added
 design, create matching TOMLs under the corresponding `config/` subdirectory.
+The generated `initial-start.md` gives the field-by-field setup and commands
+using a structural 4-bit adder example. `make synth DESIGN=name` uses
+`config/synthesis/name.toml` for generic synthesis. Both
+`make synth-mapped DESIGN=name` and `make timing DESIGN=name` use
+`config/timing/name.toml`: its `[synth]` table configures mapping and its
+`[timing]` table configures OpenSTA. Run mapped synthesis before timing.
 The Makefile follows the waveform convention
 `build/sim/<design>-<simulator>/waveforms/<design>.vcd`; pass `WAVEFORM=...` if
 your manifest uses another output path. `CONFIG=...` can override the selected
@@ -494,7 +501,7 @@ wrappers:
 | `config/simulation/directed/directed.toml` | `vlsi run` | RTL, directed testbench, top, simulator, build directory |
 | `config/simulation/uvm/uvm.toml` | `vlsi run` | RTL, UVM source list/include, top, Verilator, build directory |
 | `config/synthesis/synth.toml` | `vlsi synth` | Synthesizable RTL, top, build directory |
-| `config/timing/timing.toml` | `vlsi timing` | Mapped netlist, Liberty, SDC, top, build directory |
+| `config/timing/timing.toml` | `vlsi synth` via `make synth-mapped`; `vlsi timing` | `[synth]`: RTL, top, Liberty, ABC constraints and mapped build directory; `[timing]`: mapped netlist, same Liberty, SDC, top, timing build directory |
 
 The starter manifests set `[project] root = "../../.."` for simulation configs
 and `"../.."` for synthesis and timing configs, so source paths resolve from
@@ -526,12 +533,12 @@ The equivalent `--config MANIFEST.toml` form is also accepted by each wrapper.
 Create one TOML manifest per design and give each simulation a unique
 `build_dir` so compile logs, run logs, and waveforms stay separate.
 
-For mapped timing, add your Liberty and ABC constraint paths to
-`config/synthesis/synth.toml`, set its build directory to the technology-mapped
-output, and make `config/timing/timing.toml` point to that output's
-`<top>_netlist.v`.
-Run `./scripts/synthesis/synth.sh` first, then `./scripts/timing/timing.sh`.
-The timing wrapper only analyzes the configured netlist; it does not synthesize it.
+For mapped timing, keep the mapping `[synth]` settings and timing `[timing]`
+settings together in the design's `config/timing/<design>.toml`. The generated
+Makefile's `make synth-mapped DESIGN=<design>` uses that file to create the
+technology-mapped netlist; `make timing DESIGN=<design>` analyzes it. Set the
+same explicit compatible Liberty path in both tables, and point `netlist` at
+the `<top>_netlist.v` produced by the mapped synthesis build directory.
 
 See [Create and run a project](docs/NEW_PROJECT.md) and
 [Project configuration](docs/PROJECT_CONFIGURATION.md) for manifest examples

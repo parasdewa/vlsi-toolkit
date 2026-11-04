@@ -6,9 +6,9 @@ from either supported simulator.
 ## Generate and open a waveform
 
 Pass `--waveform` to `vlsi run` to generate a VCD file at
-`<build-dir>/waveform.vcd`. Both Icarus and Verilator support this option; the
-runner enables VCD tracing for Verilator and passes the output path to the
-simulation as `+VLSI_WAVEFORM=<path>`.
+`<build-dir>/<simulation-top>.vcd`. Both Icarus and Verilator support this
+option; the runner enables VCD tracing for Verilator and passes the output
+path to the simulation as `+VLSI_WAVEFORM=<path>`.
 
 Choose another location with `--waveform-file FILE`. This option also enables
 waveform generation. Relative paths are resolved from the selected build
@@ -27,7 +27,7 @@ generation optional and avoids changing normal simulation runs:
     string waveform_file;
     initial begin
         if (!$value$plusargs("VLSI_WAVEFORM=%s", waveform_file))
-            waveform_file = "waveform.vcd";
+            waveform_file = "my_testbench.vcd";
         $dumpfile(waveform_file);
         $dumpvars(0, my_testbench);
     end
@@ -41,7 +41,7 @@ The included counter testbench has this hook. For example:
   --project tests/rtl/counter --top counter_tb \
   --rtl counter.sv --tb counter_tb.sv
 
-gtkwave build/counter/counter_tb/waveform.vcd
+gtkwave build/counter/counter_tb/counter_tb.vcd
 ```
 
 For a custom location under the build directory, use:
@@ -54,4 +54,4 @@ For a custom location under the build directory, use:
 
 Use `--build-dir DIR` if you want to retain waveforms from multiple runs in
 separate locations. The runner-generated default remains
-`<build-dir>/waveform.vcd`.
+`<build-dir>/<simulation-top>.vcd`.

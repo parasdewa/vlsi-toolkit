@@ -13,8 +13,9 @@ SYNTH_CONFIG ?= $(if $(strip $(CONFIG)),$(CONFIG),$(if $(strip $(DESIGN)),tests/
 TIMING_CONFIG ?= $(if $(strip $(CONFIG)),$(CONFIG),$(if $(strip $(DESIGN)),tests/rtl/$(DESIGN)/vlsi_sky130_timing.toml,tests/rtl/counter/vlsi_sky130_timing.toml))
 SIM_DESIGN = $(if $(strip $(DESIGN)),$(DESIGN),counter)
 UVM_DESIGN = $(if $(strip $(DESIGN)),$(DESIGN),and_gate)
-WAVEFORM ?= $(if $(filter counter,$(SIM_DESIGN)),build/counter/counter_tb/waveforms/config_counter.vcd,)
+SIM_WAVEFORM ?= $(if $(filter counter,$(SIM_DESIGN)),build/counter/counter_tb/waveforms/config_counter.vcd,)
 UVM_WAVEFORM ?= $(if $(filter and_gate,$(UVM_DESIGN)),build/uvm-and-gate/build/and_gate_uvm.vcd,build/uvm-$(UVM_DESIGN)/build/$(UVM_DESIGN)_uvm.vcd)
+WAVEFORM ?=
 
 SIM_OPTION = $(if $(strip $(SIM)),--sim "$(SIM)",)
 
@@ -80,8 +81,8 @@ library-check:
 	$(VLSI) library check --liberty "$(LIBERTY)"
 
 wave:
-	@test -n "$(WAVEFORM)" || { echo 'This fixture has no default waveform path; set WAVEFORM=path/to/file.vcd' >&2; exit 2; }
-	gtkwave "$(WAVEFORM)"
+	@test -n "$(if $(strip $(WAVEFORM)),$(WAVEFORM),$(SIM_WAVEFORM))" || { echo 'This fixture has no default waveform path; set WAVEFORM=path/to/file.vcd' >&2; exit 2; }
+	gtkwave "$(if $(strip $(WAVEFORM)),$(WAVEFORM),$(SIM_WAVEFORM))"
 
 wave-uvm:
 	gtkwave "$(if $(strip $(WAVEFORM)),$(WAVEFORM),$(UVM_WAVEFORM))"

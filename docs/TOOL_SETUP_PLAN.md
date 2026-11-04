@@ -45,7 +45,7 @@ Use both simulators for their strengths:
 - Both produce VCD files that GTKWave can open. For toolkit projects:
 
   ```bash
-  gtkwave build/counter/counter_tb/waveform.vcd
+  gtkwave build/counter/counter_tb/counter_tb.vcd
   ```
 
   The toolkit's `--waveform` and `--waveform-file` options enable trace support

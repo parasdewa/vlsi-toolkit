@@ -15,7 +15,7 @@ module counter_tb;
     string waveform_file;
     initial begin
         if (!$value$plusargs("VLSI_WAVEFORM=%s", waveform_file))
-            waveform_file = "waveform.vcd";
+            waveform_file = "counter_tb.vcd";
         $dumpfile(waveform_file);
         $dumpvars(0, counter_tb);
     end

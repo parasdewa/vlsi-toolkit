@@ -75,7 +75,7 @@ plusarg and writes the VCD to the selected build directory:
     string waveform_file;
     initial begin
         if (!$value$plusargs("VLSI_WAVEFORM=%s", waveform_file))
-            waveform_file = "waveform.vcd";
+            waveform_file = "my_testbench.vcd";
         $dumpfile(waveform_file);
         $dumpvars(0, my_testbench);
     end
@@ -83,7 +83,7 @@ plusarg and writes the VCD to the selected build directory:
 ```
 
 Verilator's waveform option enables VCD tracing during compilation. Open the
-result with GTKWave, for example `gtkwave build/counter/counter_tb/waveform.vcd`.
+result with GTKWave, for example `gtkwave build/counter/counter_tb/counter_tb.vcd`.
 
 ## Run UVM with the CLI
 

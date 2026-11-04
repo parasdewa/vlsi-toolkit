@@ -1,16 +1,22 @@
 # Edit the design top and RTL paths. Keep testbench files out of this list.
 [project]
+# Keep this value for manifests in config/synthesis/.
 root = "../.."
 
 [synth]
+# UPDATE: RTL top module name.
 top = "my_design"
+# UPDATE: list RTL sources in compile dependency order; exclude testbenches.
 rtl = ["rtl/my_design.sv"]
+# UPDATE: add include directories if needed.
 include = ["rtl/include"]
+# UPDATE: keep each design's generic synthesis outputs separate.
 build_dir = "build/synth/generic"
 
 # For standard-cell mapping and OpenSTA timing, add the following settings,
 # using a Liberty file and ABC constraints compatible with your target:
+# UPDATE: uncomment and set these for technology mapping.
 # liberty = "/absolute/path/to/compatible_standard_cells.lib"
 # abc_constraints = "constraints/abc/my_design.abc"
 # delay_ps = 10000
-# build_dir = "build/synth/technology"
+# build_dir = "build/synth/technology/my_design"
